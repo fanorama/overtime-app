@@ -1,0 +1,25 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "overtime-itpro",
+          "appId": "1:711740855107:android:857a647f54ff60de6c95f6",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "overtime-itpro",
+          "configurations": {
+            "android": "1:711740855107:android:857a647f54ff60de6c95f6",
+            "ios": "1:711740855107:ios:f09813d610a87e426c95f6"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}
