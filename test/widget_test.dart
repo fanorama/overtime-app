@@ -1,30 +1,41 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+// Widget tests for Overtime App - Phase 2
+// Note: Firebase tests skipped until actual Firebase configuration
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:overtime_app/main.dart';
+import 'package:overtime_app/core/utils/earnings_calculator.dart';
+import 'package:overtime_app/core/utils/date_time_utils.dart';
+import 'package:overtime_app/core/validators/form_validators.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('Core Utilities Tests', () {
+    test('Earnings calculator - weekday calculation', () {
+      final workDate = DateTime(2025, 11, 3); // Monday
+      const hours = 4.0;
+      const workTypes = ['Installation'];
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+      final result = EarningsCalculator.calculate(
+        workDate: workDate,
+        hours: hours,
+        workTypes: workTypes,
+      );
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+      expect(result['total'], 265000); // 240000 + 25000
+    });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('Date utils - weekend detection', () {
+      final saturday = DateTime(2025, 11, 1);
+      final monday = DateTime(2025, 11, 3);
+
+      expect(DateTimeUtils.isWeekend(saturday), true);
+      expect(DateTimeUtils.isWeekend(monday), false);
+    });
+
+    test('Form validators - username validation', () {
+      expect(FormValidators.username('abc'), null);
+      expect(FormValidators.username('ab'), contains('minimal'));
+      expect(FormValidators.username(''), contains('wajib'));
+    });
   });
+
+  // TODO: Add Firebase-based widget tests after Firebase configuration
+  // Phase 2 authentication screens tested manually - pending Firebase setup
 }
