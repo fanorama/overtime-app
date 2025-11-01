@@ -49,3 +49,9 @@ CLAUDE.md
 
 # Git worktrees
 .worktrees/
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+docs
