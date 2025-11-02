@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import '../../domain/entities/overtime_request_entity.dart';
 import '../../../employee/domain/entities/employee_entity.dart';
 import '../../../employee/presentation/providers/employee_provider.dart';
-import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/widgets/custom_button.dart';
-import '../../../../core/validators/form_validators.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/earnings_calculator.dart';
+import '../widgets/sections/overtime_time_section.dart';
+import '../widgets/sections/overtime_customer_section.dart';
+import '../widgets/sections/overtime_involved_people_section.dart';
+import '../widgets/sections/overtime_work_details_section.dart';
+import '../widgets/sections/overtime_work_description_section.dart';
+import '../widgets/sections/overtime_earnings_preview.dart';
+import '../widgets/employee_category_selector_dialog.dart';
 
 /// Form screen untuk membuat atau edit overtime request
 class OvertimeFormScreen extends ConsumerStatefulWidget {
@@ -25,10 +29,14 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
   final _formKey = GlobalKey<FormState>();
 
   // Form controllers
-  final _customerNameController = TextEditingController();
-  final _problemDescriptionController = TextEditingController();
-  final _locationController = TextEditingController();
-  final _notesController = TextEditingController();
+  final _customerController = TextEditingController();
+  final _reportedProblemController = TextEditingController();
+  final _productController = TextEditingController();
+  final _workingDescriptionController = TextEditingController();
+  final _nextActivityController = TextEditingController();
+  final _versionController = TextEditingController();
+  final _picController = TextEditingController();
+  final _responseTimeController = TextEditingController();
 
   // Form state
   DateTime _startDate = DateTime.now();
@@ -36,11 +44,15 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
   DateTime _endDate = DateTime.now();
   TimeOfDay _endTime = TimeOfDay.now();
 
-  final Set<String> _selectedEmployeeIds = {};
+  // Employee selections by category
+  final Set<String> _selectedEngineers = {};
+  final Set<String> _selectedMaintenance = {};
+  final Set<String> _selectedPostsales = {};
+
   final Set<String> _selectedWorkTypes = {};
   String _selectedSeverity = AppConstants.severityMedium;
 
-  bool _isLoading = false;
+  final bool _isLoading = false;
   bool get _isEditMode => widget.overtimeRequest != null;
 
   // Calculated earnings
@@ -58,27 +70,45 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
 
   void _loadExistingData() {
     final request = widget.overtimeRequest!;
-    _customerNameController.text = request.customerName;
-    _problemDescriptionController.text = request.problemDescription;
-    _locationController.text = request.location;
-    _notesController.text = request.notes ?? '';
 
+    // Customer & Problem
+    _customerController.text = request.customer;
+    _reportedProblemController.text = request.reportedProblem;
+
+    // Time
     _startDate = request.startTime;
     _startTime = TimeOfDay.fromDateTime(request.startTime);
     _endDate = request.endTime;
     _endTime = TimeOfDay.fromDateTime(request.endTime);
 
-    _selectedEmployeeIds.addAll(request.employeeIds);
-    _selectedWorkTypes.addAll(request.workTypes);
+    // Involved People
+    _selectedEngineers.addAll(request.involvedEngineers);
+    _selectedMaintenance.addAll(request.involvedMaintenance);
+    _selectedPostsales.addAll(request.involvedPostsales);
+
+    // Work Details
+    _selectedWorkTypes.addAll(request.typeOfWork);
+    _productController.text = request.product;
     _selectedSeverity = request.severity;
+
+    // Work Description & Follow-up
+    _workingDescriptionController.text = request.workingDescription;
+    _nextActivityController.text = request.nextPossibleActivity ?? '';
+    _versionController.text = request.version ?? '';
+    _picController.text = request.pic ?? '';
+    _responseTimeController.text = request.responseTime.toString();
   }
 
   @override
   void dispose() {
-    _customerNameController.dispose();
-    _problemDescriptionController.dispose();
-    _locationController.dispose();
-    _notesController.dispose();
+    _customerController.dispose();
+    _reportedProblemController.dispose();
+    _productController.dispose();
+    _workingDescriptionController.dispose();
+    _nextActivityController.dispose();
+    _versionController.dispose();
+    _picController.dispose();
+    _responseTimeController.dispose();
     super.dispose();
   }
 
@@ -99,7 +129,12 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
       _endTime.minute,
     );
 
-    if (_selectedEmployeeIds.isEmpty || _selectedWorkTypes.isEmpty) {
+    // Calculate total employees from all 3 categories
+    final totalEmployees = _selectedEngineers.length +
+        _selectedMaintenance.length +
+        _selectedPostsales.length;
+
+    if (totalEmployees == 0 || _selectedWorkTypes.isEmpty) {
       setState(() {
         _calculatedEarnings = 0;
       });
@@ -111,7 +146,7 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
         startTime: startDateTime,
         endTime: endDateTime,
         workTypes: _selectedWorkTypes.toList(),
-        employeeCount: _selectedEmployeeIds.length,
+        employeeCount: totalEmployees,
       );
     });
   }
@@ -160,253 +195,60 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
     }
   }
 
-  Future<void> _showEmployeeSelector(List<EmployeeEntity> employees) async {
-    final selected = Set<String>.from(_selectedEmployeeIds);
-
-    await showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: const Text('Pilih Karyawan'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: employees.isEmpty
-                  ? const Center(
-                      child: Text('Belum ada data karyawan'),
-                    )
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: employees.length,
-                      itemBuilder: (context, index) {
-                        final employee = employees[index];
-                        final isSelected = selected.contains(employee.id);
-
-                        return CheckboxListTile(
-                          title: Text(employee.name),
-                          subtitle: Text(employee.position),
-                          value: isSelected,
-                          onChanged: (value) {
-                            setDialogState(() {
-                              if (value == true) {
-                                selected.add(employee.id);
-                              } else {
-                                selected.remove(employee.id);
-                              }
-                            });
-                          },
-                        );
-                      },
-                    ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Batal'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _selectedEmployeeIds.clear();
-                    _selectedEmployeeIds.addAll(selected);
-                    _calculateEarnings();
-                  });
-                  Navigator.pop(context);
-                },
-                child: const Text('Simpan'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildEmployeeChips(List<EmployeeEntity> employees) {
-    if (_selectedEmployeeIds.isEmpty) {
-      return const Text(
-        'Belum ada karyawan dipilih',
-        style: TextStyle(color: Colors.grey),
-      );
-    }
-
-    final selectedEmployees = employees
-        .where((e) => _selectedEmployeeIds.contains(e.id))
-        .toList();
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: selectedEmployees.map((employee) {
-        return Chip(
-          label: Text(employee.name),
-          deleteIcon: const Icon(Icons.close, size: 18),
-          onDeleted: () {
-            setState(() {
-              _selectedEmployeeIds.remove(employee.id);
-              _calculateEarnings();
-            });
-          },
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildWorkTypeCheckboxes() {
-    final workTypes = [
-      AppConstants.workTypeInstallation,
-      AppConstants.workTypeRepair,
-      AppConstants.workTypePreventive,
-      AppConstants.workTypeMonitoring,
-      AppConstants.workTypeOther,
-    ];
-
-    return Column(
-      children: workTypes.map((type) {
-        final isSelected = _selectedWorkTypes.contains(type);
-        return CheckboxListTile(
-          title: Text(type),
-          subtitle: Text(
-            'Multiplier: ${AppConstants.workTypeMultipliers[type]}x',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-          ),
-          value: isSelected,
-          onChanged: (value) {
-            setState(() {
-              if (value == true) {
-                _selectedWorkTypes.add(type);
-              } else {
-                _selectedWorkTypes.remove(type);
-              }
-              _calculateEarnings();
-            });
-          },
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildSeveritySelector() {
-    final severities = [
-      AppConstants.severityLow,
-      AppConstants.severityMedium,
-      AppConstants.severityHigh,
-      AppConstants.severityCritical,
-    ];
-
-    final colors = {
-      AppConstants.severityLow: Colors.blue,
-      AppConstants.severityMedium: Colors.orange,
-      AppConstants.severityHigh: Colors.deepOrange,
-      AppConstants.severityCritical: Colors.red,
+  Future<void> _showEmployeeCategorySelector(
+    List<EmployeeEntity> employees,
+    String category,
+  ) async {
+    final titles = {
+      'engineers': 'Pilih Engineers',
+      'maintenance': 'Pilih Maintenance',
+      'postsales': 'Pilih Postsales & Onsite',
     };
 
-    return InputDecorator(
-      decoration: const InputDecoration(
-        labelText: 'Tingkat Keseriusan',
-        border: OutlineInputBorder(),
-        prefixIcon: Icon(Icons.priority_high),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: _selectedSeverity,
-          isExpanded: true,
-          items: severities.map((severity) {
-            return DropdownMenuItem(
-              value: severity,
-              child: Row(
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: colors[severity],
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(severity),
-                ],
-              ),
-            );
-          }).toList(),
-          onChanged: (value) {
-            if (value != null) {
-              setState(() {
-                _selectedSeverity = value;
-              });
-            }
-          },
-        ),
-      ),
+    final initialSelected = category == 'engineers'
+        ? _selectedEngineers
+        : category == 'maintenance'
+            ? _selectedMaintenance
+            : _selectedPostsales;
+
+    final result = await showEmployeeCategorySelector(
+      context: context,
+      allEmployees: employees,
+      initialSelected: initialSelected,
+      category: category,
+      title: titles[category] ?? 'Pilih Karyawan',
     );
+
+    if (result != null) {
+      setState(() {
+        if (category == 'engineers') {
+          _selectedEngineers.clear();
+          _selectedEngineers.addAll(result);
+        } else if (category == 'maintenance') {
+          _selectedMaintenance.clear();
+          _selectedMaintenance.addAll(result);
+        } else if (category == 'postsales') {
+          _selectedPostsales.clear();
+          _selectedPostsales.addAll(result);
+        }
+        _calculateEarnings();
+      });
+    }
   }
 
-  Widget _buildEarningsPreview() {
-    return Card(
-      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Estimasi Pendapatan',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Upah Lembur:'),
-                Text(
-                  'Rp ${_calculatedEarnings.toStringAsFixed(0)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Uang Makan:'),
-                Text(
-                  'Rp ${_mealAllowance.toStringAsFixed(0)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const Divider(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Total:',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'Rp ${(_calculatedEarnings + _mealAllowance).toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+  void _removeEmployee(String employeeId, String category) {
+    setState(() {
+      if (category == 'engineers') {
+        _selectedEngineers.remove(employeeId);
+      } else if (category == 'maintenance') {
+        _selectedMaintenance.remove(employeeId);
+      } else if (category == 'postsales') {
+        _selectedPostsales.remove(employeeId);
+      }
+      _calculateEarnings();
+    });
   }
+
 
   Future<void> _saveOvertimeRequest() async {
     if (!_formKey.currentState!.validate()) {
@@ -419,10 +261,15 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
       return;
     }
 
-    if (_selectedEmployeeIds.isEmpty) {
+    // Validate total employees from all 3 categories
+    final totalEmployees = _selectedEngineers.length +
+        _selectedMaintenance.length +
+        _selectedPostsales.length;
+
+    if (totalEmployees == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Mohon pilih minimal 1 karyawan'),
+          content: Text('Mohon pilih minimal 1 karyawan dari kategori manapun'),
           backgroundColor: Colors.red,
         ),
       );
@@ -439,13 +286,31 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
       return;
     }
 
-    // TODO: Implement save to Firestore
+    // TODO: Implement save to Firestore with new schema
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Fitur simpan belum diimplementasikan'),
         backgroundColor: Colors.orange,
       ),
     );
+  }
+
+  double get _calculatedHours {
+    final startDateTime = DateTime(
+      _startDate.year,
+      _startDate.month,
+      _startDate.day,
+      _startTime.hour,
+      _startTime.minute,
+    );
+    final endDateTime = DateTime(
+      _endDate.year,
+      _endDate.month,
+      _endDate.day,
+      _endTime.hour,
+      _endTime.minute,
+    );
+    return endDateTime.difference(startDateTime).inMinutes / 60.0;
   }
 
   @override
@@ -462,191 +327,77 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // Section 1: Time Information
-              _buildSectionHeader('Informasi Waktu'),
-              const SizedBox(height: 8),
-
-              // Start Date & Time
-              Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _selectDate(context, true),
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Tanggal Mulai',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.calendar_today),
-                        ),
-                        child: Text(
-                          DateFormat('dd MMM yyyy').format(_startDate),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _selectTime(context, true),
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Jam Mulai',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.access_time),
-                        ),
-                        child: Text(_startTime.format(context)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // End Date & Time
-              Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _selectDate(context, false),
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Tanggal Selesai',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.calendar_today),
-                        ),
-                        child: Text(
-                          DateFormat('dd MMM yyyy').format(_endDate),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _selectTime(context, false),
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Jam Selesai',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.access_time),
-                        ),
-                        child: Text(_endTime.format(context)),
-                      ),
-                    ),
-                  ),
-                ],
+              // Section 1: Time & Duration
+              OvertimeTimeSection(
+                startDate: _startDate,
+                startTime: _startTime,
+                endDate: _endDate,
+                endTime: _endTime,
+                calculatedHours: _calculatedHours,
+                onSelectStartDate: () => _selectDate(context, true),
+                onSelectStartTime: () => _selectTime(context, true),
+                onSelectEndDate: () => _selectDate(context, false),
+                onSelectEndTime: () => _selectTime(context, false),
               ),
               const SizedBox(height: 24),
 
-              // Section 2: Customer Information
-              _buildSectionHeader('Informasi Pelanggan'),
-              const SizedBox(height: 8),
-
-              CustomTextField(
-                controller: _customerNameController,
-                label: 'Nama Pelanggan',
-                hint: 'Masukkan nama pelanggan',
-                prefixIcon: Icons.business,
-                validator: FormValidators.required,
-                maxLength: AppConstants.maxCustomerNameLength,
-              ),
-              const SizedBox(height: 16),
-
-              CustomTextField(
-                controller: _problemDescriptionController,
-                label: 'Deskripsi Masalah',
-                hint: 'Jelaskan masalah yang ditangani',
-                prefixIcon: Icons.description,
-                maxLines: 3,
-                validator: FormValidators.required,
-                maxLength: AppConstants.maxProblemDescriptionLength,
-              ),
-              const SizedBox(height: 16),
-
-              CustomTextField(
-                controller: _locationController,
-                label: 'Lokasi',
-                hint: 'Masukkan lokasi pekerjaan',
-                prefixIcon: Icons.location_on,
-                validator: FormValidators.required,
-                maxLength: AppConstants.maxLocationLength,
+              // Section 2: Customer & Problem
+              OvertimeCustomerSection(
+                customerController: _customerController,
+                reportedProblemController: _reportedProblemController,
               ),
               const SizedBox(height: 24),
 
-              // Section 3: Work Details
-              _buildSectionHeader('Detail Pekerjaan'),
-              const SizedBox(height: 8),
-
-              // Employee Selection
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Karyawan',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          TextButton.icon(
-                            onPressed: () => _showEmployeeSelector(employees),
-                            icon: const Icon(Icons.add),
-                            label: const Text('Pilih'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      _buildEmployeeChips(employees),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Work Types
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Jenis Pekerjaan',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      _buildWorkTypeCheckboxes(),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Severity
-              _buildSeveritySelector(),
-              const SizedBox(height: 16),
-
-              // Notes
-              CustomTextField(
-                controller: _notesController,
-                label: 'Catatan (Opsional)',
-                hint: 'Tambahkan catatan jika ada',
-                prefixIcon: Icons.note,
-                maxLines: 3,
-                maxLength: AppConstants.maxNotesLength,
+              // Section 3: Involved People
+              OvertimeInvolvedPeopleSection(
+                allEmployees: employees,
+                selectedEngineers: _selectedEngineers,
+                selectedMaintenance: _selectedMaintenance,
+                selectedPostsales: _selectedPostsales,
+                onSelectEmployees: (category) =>
+                    _showEmployeeCategorySelector(employees, category),
+                onRemoveEmployee: _removeEmployee,
               ),
               const SizedBox(height: 24),
 
-              // Earnings Preview
-              _buildEarningsPreview(),
+              // Section 4: Work Details
+              OvertimeWorkDetailsSection(
+                selectedWorkTypes: _selectedWorkTypes,
+                productController: _productController,
+                selectedSeverity: _selectedSeverity,
+                onWorkTypeChanged: (type) {
+                  setState(() {
+                    if (_selectedWorkTypes.contains(type)) {
+                      _selectedWorkTypes.remove(type);
+                    } else {
+                      _selectedWorkTypes.add(type);
+                    }
+                    _calculateEarnings();
+                  });
+                },
+                onSeverityChanged: (severity) {
+                  setState(() {
+                    _selectedSeverity = severity;
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
+
+              // Section 5: Work Description & Follow-up
+              OvertimeWorkDescriptionSection(
+                workingDescriptionController: _workingDescriptionController,
+                nextActivityController: _nextActivityController,
+                versionController: _versionController,
+                picController: _picController,
+                responseTimeController: _responseTimeController,
+              ),
+              const SizedBox(height: 24),
+
+              // Section 6: Earnings Preview
+              OvertimeEarningsPreview(
+                calculatedEarnings: _calculatedEarnings,
+                mealAllowance: _mealAllowance,
+              ),
               const SizedBox(height: 24),
 
               // Submit Button
@@ -662,16 +413,6 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
         error: (error, stack) => Center(
           child: Text('Error loading employees: $error'),
         ),
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
       ),
     );
   }
