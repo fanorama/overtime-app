@@ -7,6 +7,9 @@ import '../providers/overtime_provider.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/severity_badge.dart';
 import 'overtime_form_screen.dart';
+import '../widgets/rejection_reason_dialog.dart';
+import '../../domain/entities/overtime_request_entity.dart';
+import '../../../auth/presentation/providers/auth_state.dart';
 
 /// Screen untuk menampilkan detail overtime request
 class OvertimeDetailScreen extends ConsumerWidget {
@@ -492,7 +495,160 @@ class OvertimeDetailScreen extends ConsumerWidget {
           ),
         ),
       ),
+      // Approval buttons for manager (hanya untuk pending requests)
+      floatingActionButton: requestAsync.maybeWhen(
+        data: (request) {
+          if (request == null) return null;
+
+          // Only show for managers and pending status
+          if (!isManager || request.status != AppConstants.statusPending) {
+            return null;
+          }
+
+          return _buildApprovalButtons(context, ref, request);
+        },
+        orElse: () => null,
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
+  }
+
+  /// Widget untuk approval buttons
+  Widget _buildApprovalButtons(
+    BuildContext context,
+    WidgetRef ref,
+    OvertimeRequestEntity request,
+  ) {
+    final authState = ref.watch(authControllerProvider);
+    final controller = ref.watch(overtimeControllerProvider);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          // Reject Button
+          Expanded(
+            child: FloatingActionButton.extended(
+              onPressed: controller.isLoading
+                  ? null
+                  : () => _handleReject(context, ref, authState),
+              backgroundColor: Colors.red,
+              heroTag: 'reject',
+              icon: const Icon(Icons.cancel),
+              label: const Text('Tolak'),
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Approve Button
+          Expanded(
+            child: FloatingActionButton.extended(
+              onPressed: controller.isLoading
+                  ? null
+                  : () => _handleApprove(context, ref, authState),
+              backgroundColor: Colors.green,
+              heroTag: 'approve',
+              icon: const Icon(Icons.check_circle),
+              label: const Text('Setujui'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Handle approve action
+  Future<void> _handleApprove(
+    BuildContext context,
+    WidgetRef ref,
+    AuthState authState,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Konfirmasi Approval'),
+        content: const Text('Apakah Anda yakin ingin menyetujui request lembur ini?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('Setujui'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    final controller = ref.read(overtimeControllerProvider.notifier);
+    final success = await controller.approveRequest(
+      requestId,
+      authState.user!.id,
+      authState.user!.displayName ?? authState.user!.username,
+    );
+
+    if (!context.mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Request berhasil disetujui'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.of(context).pop(); // Kembali ke list
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal menyetujui request'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  /// Handle reject action
+  Future<void> _handleReject(
+    BuildContext context,
+    WidgetRef ref,
+    AuthState authState,
+  ) async {
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) => const RejectionReasonDialog(),
+    );
+
+    if (reason == null || reason.isEmpty || !context.mounted) return;
+
+    final controller = ref.read(overtimeControllerProvider.notifier);
+    final success = await controller.rejectRequest(
+      requestId,
+      authState.user!.id,
+      authState.user!.displayName ?? authState.user!.username,
+      reason,
+    );
+
+    if (!context.mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Request berhasil ditolak'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      Navigator.of(context).pop(); // Kembali ke list
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal menolak request'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Widget _buildSection(

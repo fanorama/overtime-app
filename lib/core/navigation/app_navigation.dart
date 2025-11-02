@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/dashboard/presentation/screens/home_screen.dart';
 import '../../features/overtime/presentation/screens/overtime_list_screen.dart';
+import '../../features/overtime/presentation/screens/manager_request_list_screen.dart';
 import '../../features/employee/presentation/screens/employee_list_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 
@@ -32,8 +33,13 @@ class _AppNavigationState extends ConsumerState<AppNavigation> {
             ),
             _NavigationItem(
               icon: Icons.access_time,
-              label: 'Lembur',
+              label: 'Lembur Saya',
               screen: const OvertimeListScreen(),
+            ),
+            _NavigationItem(
+              icon: Icons.approval,
+              label: 'Approval',
+              screen: const ManagerRequestListScreen(),
             ),
             _NavigationItem(
               icon: Icons.people,
