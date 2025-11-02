@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/employee_repository.dart';
 import '../../domain/entities/employee_entity.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 /// Provider untuk EmployeeRepository
 final employeeRepositoryProvider = Provider<EmployeeRepository>((ref) {
@@ -8,7 +9,24 @@ final employeeRepositoryProvider = Provider<EmployeeRepository>((ref) {
 });
 
 /// Provider untuk stream semua employees
+/// Wait for auth state to be ready before fetching employees
 final employeesStreamProvider = StreamProvider<List<EmployeeEntity>>((ref) {
+  // Tunggu auth state dulu untuk menghindari race condition
+  final authState = ref.watch(authControllerProvider);
+
+  print('🔐 [EmployeesStreamProvider] Auth state check:');
+  print('   - Is Authenticated: ${authState.isAuthenticated}');
+  print('   - Is Loading: ${authState.isLoading}');
+  print('   - User: ${authState.user?.username ?? "null"}');
+
+  // Jika belum authenticated, return empty stream
+  if (!authState.isAuthenticated) {
+    print('⚠️  [EmployeesStreamProvider] User not authenticated, returning empty stream');
+    return Stream.value([]);
+  }
+
+  // User sudah authenticated, fetch employees
+  print('✅ [EmployeesStreamProvider] User authenticated, fetching employees...');
   final repository = ref.watch(employeeRepositoryProvider);
   return repository.getAllEmployees();
 });

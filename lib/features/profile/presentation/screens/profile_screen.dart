@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../../core/utils/seed_data.dart';
 
 /// Screen untuk menampilkan profil user dan logout
 class ProfileScreen extends ConsumerWidget {
@@ -83,6 +84,108 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
+
+                // Developer Tools (only for managers)
+                if (user.role == 'manager') ...[
+                  Card(
+                    color: Colors.amber.shade50,
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.developer_mode, color: Colors.amber),
+                          title: const Text(
+                            'Developer Tools',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: const Text('Tools untuk testing dan development'),
+                        ),
+                        const Divider(),
+                        ListTile(
+                          leading: const Icon(Icons.group_add),
+                          title: const Text('Seed 5 Dummy Employees'),
+                          subtitle: const Text('Tambahkan 5 karyawan dummy ke database'),
+                          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                          onTap: () async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Seed Dummy Employees'),
+                                content: const Text(
+                                  'Akan menambahkan 5 karyawan dummy:\n'
+                                  '• Ahmad Fauzi (EMP001)\n'
+                                  '• Siti Nurhaliza (EMP002)\n'
+                                  '• Budi Santoso (EMP003)\n'
+                                  '• Dewi Lestari (EMP004)\n'
+                                  '• Rudi Hartono (EMP005)\n\n'
+                                  'Lanjutkan?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, false),
+                                    child: const Text('Batal'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.pop(context, true),
+                                    child: const Text('Tambahkan'),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (confirmed == true && context.mounted) {
+                              // Show loading
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (context) => const Center(
+                                  child: Card(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(20),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          CircularProgressIndicator(),
+                                          SizedBox(height: 16),
+                                          Text('Menambahkan karyawan...'),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+
+                              try {
+                                final seedData = SeedData();
+                                await seedData.seedEmployees();
+
+                                if (context.mounted) {
+                                  Navigator.pop(context); // Close loading
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('✅ Berhasil menambahkan dummy employees!'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  Navigator.pop(context); // Close loading
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('❌ Error: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
 
                 // Logout Button
                 SizedBox(

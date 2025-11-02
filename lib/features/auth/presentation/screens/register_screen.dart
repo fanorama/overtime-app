@@ -139,7 +139,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   prefixIcon: Icons.lock_outline,
                   obscureText: _obscurePassword,
                   validator: FormValidators.password,
-                  suffix: IconButton(
+                  suffixIcon: IconButton(
                     icon: Icon(
                       _obscurePassword
                           ? Icons.visibility_outlined
@@ -163,7 +163,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   prefixIcon: Icons.lock_outline,
                   obscureText: _obscureConfirmPassword,
                   validator: _validateConfirmPassword,
-                  suffix: IconButton(
+                  suffixIcon: IconButton(
                     icon: Icon(
                       _obscureConfirmPassword
                           ? Icons.visibility_outlined

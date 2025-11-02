@@ -1,0 +1,120 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../features/employee/data/models/employee_model.dart';
+import '../../features/employee/domain/entities/employee_entity.dart';
+import '../constants/app_constants.dart';
+
+/// Utility untuk seed dummy data ke Firestore
+class SeedData {
+  final FirebaseFirestore _firestore;
+
+  SeedData({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  /// Seed 5 dummy employees
+  Future<void> seedEmployees() async {
+    final employees = [
+      EmployeeEntity(
+        id: '', // Will be auto-generated
+        employeeId: 'EMP001',
+        name: 'Ahmad Fauzi',
+        position: 'Senior Technician',
+        department: 'Technical Support',
+        baseRate: AppConstants.baseWeekdayRate,
+        weekendRate: AppConstants.baseWeekendRate,
+        phoneNumber: '081234567890',
+        isActive: true,
+        createdAt: DateTime.now(),
+      ),
+      EmployeeEntity(
+        id: '',
+        employeeId: 'EMP002',
+        name: 'Siti Nurhaliza',
+        position: 'Field Engineer',
+        department: 'Technical Support',
+        baseRate: AppConstants.baseWeekdayRate,
+        weekendRate: AppConstants.baseWeekendRate,
+        phoneNumber: '081234567891',
+        isActive: true,
+        createdAt: DateTime.now(),
+      ),
+      EmployeeEntity(
+        id: '',
+        employeeId: 'EMP003',
+        name: 'Budi Santoso',
+        position: 'Network Administrator',
+        department: 'IT Infrastructure',
+        baseRate: AppConstants.baseWeekdayRate,
+        weekendRate: AppConstants.baseWeekendRate,
+        phoneNumber: '081234567892',
+        isActive: true,
+        createdAt: DateTime.now(),
+      ),
+      EmployeeEntity(
+        id: '',
+        employeeId: 'EMP004',
+        name: 'Dewi Lestari',
+        position: 'System Analyst',
+        department: 'IT Infrastructure',
+        baseRate: AppConstants.baseWeekdayRate,
+        weekendRate: AppConstants.baseWeekendRate,
+        phoneNumber: '081234567893',
+        isActive: true,
+        createdAt: DateTime.now(),
+      ),
+      EmployeeEntity(
+        id: '',
+        employeeId: 'EMP005',
+        name: 'Rudi Hartono',
+        position: 'Database Administrator',
+        department: 'IT Infrastructure',
+        baseRate: AppConstants.baseWeekdayRate,
+        weekendRate: AppConstants.baseWeekendRate,
+        phoneNumber: '081234567894',
+        isActive: true,
+        createdAt: DateTime.now(),
+      ),
+    ];
+
+    final collection = _firestore.collection(AppConstants.employeesCollection);
+
+    int added = 0;
+    int skipped = 0;
+
+    for (final employee in employees) {
+      // Check if employee ID already exists
+      final existing = await collection
+          .where('employeeId', isEqualTo: employee.employeeId)
+          .get();
+
+      if (existing.docs.isEmpty) {
+        // Add employee
+        final model = EmployeeModel.fromEntity(employee);
+        await collection.add(model.toFirestore());
+        added++;
+        print('✅ Added: ${employee.name} (${employee.employeeId})');
+      } else {
+        skipped++;
+        print('⏭️  Skipped: ${employee.name} (${employee.employeeId}) - already exists');
+      }
+    }
+
+    print('\n📊 Summary:');
+    print('   Added: $added employees');
+    print('   Skipped: $skipped employees');
+    print('   Total: ${employees.length} employees processed');
+  }
+
+  /// Clear all employees (untuk testing)
+  Future<void> clearEmployees() async {
+    final collection = _firestore.collection(AppConstants.employeesCollection);
+    final snapshot = await collection.get();
+
+    int deleted = 0;
+    for (final doc in snapshot.docs) {
+      await doc.reference.delete();
+      deleted++;
+    }
+
+    print('🗑️  Deleted $deleted employees');
+  }
+}

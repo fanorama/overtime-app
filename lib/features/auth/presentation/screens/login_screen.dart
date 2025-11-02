@@ -125,7 +125,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     prefixIcon: Icons.lock_outline,
                     obscureText: _obscurePassword,
                     validator: FormValidators.password,
-                    suffix: IconButton(
+                    suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword
                             ? Icons.visibility_outlined

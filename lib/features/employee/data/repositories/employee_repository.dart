@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/employee_model.dart';
 import '../../domain/entities/employee_entity.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -16,10 +17,22 @@ class EmployeeRepository {
 
   /// Get all employees
   Stream<List<EmployeeEntity>> getAllEmployees() {
+    // Debug: Log auth status
+    final currentUser = FirebaseAuth.instance.currentUser;
+    print('🔍 [EmployeeRepository] Fetching employees...');
+    print('🔑 [EmployeeRepository] Auth user: ${currentUser?.uid ?? "NOT AUTHENTICATED"}');
+    print('📦 [EmployeeRepository] Collection: ${AppConstants.employeesCollection}');
+
     return _collection
         .orderBy('name')
         .snapshots()
+        .handleError((error) {
+          print('❌ [EmployeeRepository] Firestore error: $error');
+          print('🔑 [EmployeeRepository] Auth user at error: ${FirebaseAuth.instance.currentUser?.uid ?? "NOT AUTHENTICATED"}');
+          throw error;
+        })
         .map((snapshot) {
+      print('✅ [EmployeeRepository] Received ${snapshot.docs.length} employees');
       return snapshot.docs
           .map((doc) => EmployeeModel.fromFirestore(
                 doc.data() as Map<String, dynamic>,
