@@ -8,11 +8,13 @@ import 'severity_badge.dart';
 class OvertimeCard extends StatelessWidget {
   final OvertimeRequestEntity request;
   final VoidCallback? onTap;
+  final bool showEmployeeName;
 
   const OvertimeCard({
     super.key,
     required this.request,
     this.onTap,
+    this.showEmployeeName = false,
   });
 
   @override
@@ -167,7 +169,7 @@ class OvertimeCard extends StatelessWidget {
               ),
 
               // Show submitter name if this is manager view
-              if (request.submitterName.isNotEmpty) ...[
+              if (showEmployeeName && request.submitterName.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -178,6 +180,7 @@ class OvertimeCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 12,
                         color: Colors.grey,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
