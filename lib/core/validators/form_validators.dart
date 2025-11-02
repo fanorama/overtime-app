@@ -35,46 +35,6 @@ class FormValidators {
     return null;
   }
 
-  /// Validate customer name
-  static String? customerName(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Nama customer wajib diisi';
-    }
-    if (value.length > AppConstants.maxCustomerNameLength) {
-      return 'Nama customer maksimal ${AppConstants.maxCustomerNameLength} karakter';
-    }
-    return null;
-  }
-
-  /// Validate problem description
-  static String? problemDescription(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Deskripsi problem wajib diisi';
-    }
-    if (value.length > AppConstants.maxProblemDescriptionLength) {
-      return 'Deskripsi problem maksimal ${AppConstants.maxProblemDescriptionLength} karakter';
-    }
-    return null;
-  }
-
-  /// Validate location
-  static String? location(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Lokasi wajib diisi';
-    }
-    if (value.length > AppConstants.maxLocationLength) {
-      return 'Lokasi maksimal ${AppConstants.maxLocationLength} karakter';
-    }
-    return null;
-  }
-
-  /// Validate notes
-  static String? notes(String? value) {
-    if (value != null && value.length > AppConstants.maxNotesLength) {
-      return 'Catatan maksimal ${AppConstants.maxNotesLength} karakter';
-    }
-    return null;
-  }
 
   /// Validate time range
   static String? timeRange(DateTime? startTime, DateTime? endTime) {

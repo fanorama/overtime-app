@@ -13,6 +13,7 @@ class CustomTextField extends StatelessWidget {
   final int? maxLength;
   final IconData? prefixIcon;
   final Widget? suffix;
+  final Widget? suffixIcon;
   final bool readOnly;
   final bool enabled;
   final VoidCallback? onTap;
@@ -31,6 +32,7 @@ class CustomTextField extends StatelessWidget {
     this.maxLength,
     this.prefixIcon,
     this.suffix,
+    this.suffixIcon,
     this.readOnly = false,
     this.enabled = true,
     this.onTap,
@@ -47,6 +49,7 @@ class CustomTextField extends StatelessWidget {
         hintText: hint,
         prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
         suffix: suffix,
+        suffixIcon: suffixIcon,
       ),
       validator: validator,
       obscureText: obscureText,
