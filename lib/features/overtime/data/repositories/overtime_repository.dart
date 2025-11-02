@@ -233,8 +233,8 @@ class OvertimeRepository {
     try {
       final snapshot = await _collection
           .where('submittedBy', isEqualTo: userId)
-          .where('workDate', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
-          .where('workDate', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
+          .where('startTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+          .where('startTime', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
           .get();
 
       final requests = snapshot.docs
@@ -249,12 +249,13 @@ class OvertimeRepository {
 
       for (final request in requests) {
         totalHours += request.totalHours;
-        if (request.status == 'APPROVED') {
+        final statusUpper = request.status.toUpperCase();
+        if (statusUpper == 'APPROVED') {
           totalEarnings += request.totalEarnings;
           approvedCount++;
-        } else if (request.status == 'PENDING') {
+        } else if (statusUpper == 'PENDING') {
           pendingCount++;
-        } else if (request.status == 'REJECTED') {
+        } else if (statusUpper == 'REJECTED') {
           rejectedCount++;
         }
       }
@@ -279,8 +280,8 @@ class OvertimeRepository {
   ) async {
     try {
       final snapshot = await _collection
-          .where('workDate', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
-          .where('workDate', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
+          .where('startTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+          .where('startTime', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
           .get();
 
       final requests = snapshot.docs
@@ -308,12 +309,13 @@ class OvertimeRepository {
       for (final request in requests) {
         totalHours += request.totalHours;
 
-        if (request.status == 'APPROVED') {
+        final statusUpper = request.status.toUpperCase();
+        if (statusUpper == 'APPROVED') {
           totalEarnings += request.totalEarnings;
           approvedCount++;
-        } else if (request.status == 'PENDING') {
+        } else if (statusUpper == 'PENDING') {
           pendingCount++;
-        } else if (request.status == 'REJECTED') {
+        } else if (statusUpper == 'REJECTED') {
           rejectedCount++;
         }
 
@@ -326,8 +328,9 @@ class OvertimeRepository {
             employeeHours[request.submittedBy]! + request.totalHours;
 
         // Track severity
-        severityBreakdown[request.severity] =
-            (severityBreakdown[request.severity] ?? 0) + 1;
+        final severityUpper = request.severity.toUpperCase();
+        severityBreakdown[severityUpper] =
+            (severityBreakdown[severityUpper] ?? 0) + 1;
       }
 
       // Get top 5 employees by hours
