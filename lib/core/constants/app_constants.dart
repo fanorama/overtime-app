@@ -14,42 +14,53 @@ class AppConstants {
   static const String roleManager = 'manager';
 
   // Overtime Status
-  static const String statusPending = 'PENDING';
-  static const String statusApproved = 'APPROVED';
-  static const String statusRejected = 'REJECTED';
+  static const String statusPending = 'pending';
+  static const String statusApproved = 'approved';
+  static const String statusRejected = 'rejected';
 
-  // Work Types
-  static const String workTypeInstallation = 'Installation';
-  static const String workTypeRepair = 'Repair';
-  static const String workTypePreventive = 'Preventive';
-  static const String workTypeMonitoring = 'Monitoring';
-  static const String workTypeOther = 'Other';
+  // Type of Work (as per design schema)
+  static const String workTypeOvertime = 'Overtime';
+  static const String workTypeCall = 'Call';
+  static const String workTypeUnplanned = 'Unplanned';
+  static const String workTypeNonOT = 'NonOT';
+  static const String workTypeVisitSiang = 'Visit Siang';
 
   // Severity Levels
-  static const String severityLow = 'Low';
-  static const String severityMedium = 'Medium';
-  static const String severityHigh = 'High';
-  static const String severityCritical = 'Critical';
+  static const String severityLow = 'low';
+  static const String severityMedium = 'medium';
+  static const String severityHigh = 'high';
+  static const String severityCritical = 'critical';
+
+  // Employee Roles
+  static const String employeeRoleEngineer = 'engineer';
+  static const String employeeRoleMaintenance = 'maintenance';
+  static const String employeeRolePostsales = 'postsales';
+  static const String employeeRoleOnsite = 'onsite';
 
   // Earning Rates (Phase 1: Hardcoded)
   static const double baseWeekdayRate = 50000; // per hour
   static const double baseWeekendRate = 75000; // per hour
   static const double mealAllowance = 25000; // per day
 
-  // Work Type Multipliers
+  // Work Type Multipliers (as per design schema)
   static const Map<String, double> workTypeMultipliers = {
-    workTypeInstallation: 1.2,
-    workTypeRepair: 1.5,
-    workTypePreventive: 1.0,
-    workTypeMonitoring: 1.0,
-    workTypeOther: 1.0,
+    workTypeOvertime: 1.0,      // Base rate
+    workTypeCall: 1.2,          // 20% extra
+    workTypeUnplanned: 1.5,     // 50% extra
+    workTypeNonOT: 0.5,         // Half rate
+    workTypeVisitSiang: 1.0,    // Base rate
   };
 
   // Form Validation
-  static const int maxCustomerNameLength = 100;
-  static const int maxProblemDescriptionLength = 500;
-  static const int maxLocationLength = 200;
-  static const int maxNotesLength = 1000;
+  static const int maxCustomerLength = 100;
+  static const int minReportedProblemLength = 10;
+  static const int maxReportedProblemLength = 500;
+  static const int minWorkingDescriptionLength = 10;
+  static const int maxWorkingDescriptionLength = 1000;
+  static const int maxProductLength = 100;
+  static const int maxNextActivityLength = 500;
+  static const int maxVersionLength = 50;
+  static const int maxPicLength = 100;
   static const int minEmployeeSelection = 1;
 
   // Performance
