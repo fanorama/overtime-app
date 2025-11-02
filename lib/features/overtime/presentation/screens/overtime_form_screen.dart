@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/overtime_request_entity.dart';
 import '../../../employee/domain/entities/employee_entity.dart';
 import '../../../employee/presentation/providers/employee_provider.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../providers/overtime_provider.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/earnings_calculator.dart';
@@ -286,11 +288,184 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
       return;
     }
 
-    // TODO: Implement save to Firestore with new schema
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Fitur simpan belum diimplementasikan'),
-        backgroundColor: Colors.orange,
+    // Check if editing approved/rejected request and show warning
+    if (_isEditMode && widget.overtimeRequest!.status != AppConstants.statusPending) {
+      final shouldProceed = await _showEditApprovedWarning(widget.overtimeRequest!.status);
+      if (shouldProceed != true) return;
+    }
+
+    final authState = ref.read(authControllerProvider);
+    if (authState.user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('User tidak ditemukan'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Build datetime objects
+    final startDateTime = DateTime(
+      _startDate.year,
+      _startDate.month,
+      _startDate.day,
+      _startTime.hour,
+      _startTime.minute,
+    );
+    final endDateTime = DateTime(
+      _endDate.year,
+      _endDate.month,
+      _endDate.day,
+      _endTime.hour,
+      _endTime.minute,
+    );
+
+    // Calculate earnings
+    final totalHours = _calculatedHours;
+    final isWeekend = startDateTime.weekday == DateTime.saturday ||
+        startDateTime.weekday == DateTime.sunday;
+    final earnings = EarningsCalculator.calculateTotalEarnings(
+      startTime: startDateTime,
+      endTime: endDateTime,
+      workTypes: _selectedWorkTypes.toList(),
+      employeeCount: totalEmployees,
+    );
+
+    // Create or update request entity
+    final request = OvertimeRequestEntity(
+      id: _isEditMode ? widget.overtimeRequest!.id : '',
+      submittedBy: authState.user!.id,
+      submitterName: authState.user!.displayName ?? authState.user!.username,
+      startTime: startDateTime,
+      endTime: endDateTime,
+      totalHours: totalHours,
+      isWeekend: isWeekend,
+      customer: _customerController.text.trim(),
+      reportedProblem: _reportedProblemController.text.trim(),
+      involvedEngineers: _selectedEngineers.toList(),
+      involvedMaintenance: _selectedMaintenance.toList(),
+      involvedPostsales: _selectedPostsales.toList(),
+      typeOfWork: _selectedWorkTypes.toList(),
+      product: _productController.text.trim(),
+      severity: _selectedSeverity,
+      workingDescription: _workingDescriptionController.text.trim(),
+      nextPossibleActivity: _nextActivityController.text.trim().isEmpty
+          ? null
+          : _nextActivityController.text.trim(),
+      version: _versionController.text.trim().isEmpty
+          ? null
+          : _versionController.text.trim(),
+      pic: _picController.text.trim().isEmpty
+          ? null
+          : _picController.text.trim(),
+      responseTime: int.tryParse(_responseTimeController.text) ?? 0,
+      calculatedEarnings: earnings,
+      mealAllowance: _mealAllowance,
+      totalEarnings: earnings + _mealAllowance,
+      status: _isEditMode && widget.overtimeRequest!.status != AppConstants.statusPending
+          ? AppConstants.statusPending // Reset to pending if editing approved/rejected
+          : (_isEditMode ? widget.overtimeRequest!.status : AppConstants.statusPending),
+      isEdited: _isEditMode && widget.overtimeRequest!.status != AppConstants.statusPending,
+      editHistory: _isEditMode && widget.overtimeRequest!.status != AppConstants.statusPending
+          ? [
+              ...widget.overtimeRequest!.editHistory,
+              EditHistory(
+                editedAt: DateTime.now(),
+                editedBy: authState.user!.displayName ?? authState.user!.username,
+                reason: 'Request edited, requiring re-approval',
+              ),
+            ]
+          : (_isEditMode ? widget.overtimeRequest!.editHistory : []),
+      createdAt: _isEditMode ? widget.overtimeRequest!.createdAt : DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    // Save to Firestore
+    final controller = ref.read(overtimeControllerProvider.notifier);
+    bool success;
+
+    if (_isEditMode) {
+      success = await controller.updateRequest(widget.overtimeRequest!.id, request);
+    } else {
+      final id = await controller.createRequest(request);
+      success = id != null;
+    }
+
+    if (!mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isEditMode ? 'Request berhasil diupdate' : 'Request berhasil disubmit'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.of(context).pop();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isEditMode ? 'Gagal update request' : 'Gagal submit request'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  /// Show warning dialog when editing approved/rejected request
+  Future<bool?> _showEditApprovedWarning(String currentStatus) async {
+    final statusText = currentStatus == AppConstants.statusApproved ? 'disetujui' : 'ditolak';
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange.shade700),
+            const SizedBox(width: 8),
+            const Text('Perhatian'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Request ini sudah $statusText.',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Jika Anda melakukan perubahan:',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '• Status akan kembali ke PENDING\n'
+              '• Memerlukan approval ulang dari manager\n'
+              '• Perubahan akan dicatat dalam history',
+              style: TextStyle(fontSize: 13, height: 1.5),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Apakah Anda yakin ingin melanjutkan?',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Lanjutkan Edit'),
+          ),
+        ],
       ),
     );
   }
