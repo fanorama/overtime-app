@@ -1,28 +1,35 @@
-/// Overtime request entity
+/// Overtime request entity - Updated to match design schema
 class OvertimeRequestEntity {
   final String id;
   final String submittedBy; // User ID
   final String submitterName; // Denormalized for query performance
 
-  // Time & Customer Info
-  final DateTime workDate;
+  // Time & Duration
   final DateTime startTime;
   final DateTime endTime;
   final double totalHours;
-  final String customerName;
-  final String problemDescription;
-  final String location;
+  final bool isWeekend;
 
-  // People involved
-  final List<String> employeeIds;
-  final List<String> employeeNames; // Denormalized
+  // Customer & Problem
+  final String customer;
+  final String reportedProblem;
 
-  // Work details
-  final List<String> workTypes;
-  final String severity; // Low, Medium, High, Critical
-  final String? rootCause;
-  final String? solution;
-  final String? notes;
+  // Involved People (separated by role)
+  final List<String> involvedEngineers;
+  final List<String> involvedMaintenance;
+  final List<String> involvedPostsales;
+
+  // Work Details
+  final List<String> typeOfWork;
+  final String product;
+  final String severity; // low, medium, high, critical
+
+  // Work Description & Follow-up
+  final String workingDescription;
+  final String? nextPossibleActivity;
+  final String? version;
+  final String? pic;
+  final int responseTime; // in minutes
 
   // Earnings
   final double calculatedEarnings;
@@ -30,7 +37,7 @@ class OvertimeRequestEntity {
   final double totalEarnings;
 
   // Approval workflow
-  final String status; // PENDING, APPROVED, REJECTED
+  final String status; // pending, approved, rejected
   final String? approvedBy; // Manager User ID
   final String? approverName;
   final DateTime? approvedAt;
@@ -46,24 +53,27 @@ class OvertimeRequestEntity {
     required this.id,
     required this.submittedBy,
     required this.submitterName,
-    required this.workDate,
     required this.startTime,
     required this.endTime,
     required this.totalHours,
-    required this.customerName,
-    required this.problemDescription,
-    required this.location,
-    required this.employeeIds,
-    required this.employeeNames,
-    required this.workTypes,
+    required this.isWeekend,
+    required this.customer,
+    required this.reportedProblem,
+    this.involvedEngineers = const [],
+    this.involvedMaintenance = const [],
+    this.involvedPostsales = const [],
+    required this.typeOfWork,
+    required this.product,
     required this.severity,
-    this.rootCause,
-    this.solution,
-    this.notes,
+    required this.workingDescription,
+    this.nextPossibleActivity,
+    this.version,
+    this.pic,
+    this.responseTime = 0,
     required this.calculatedEarnings,
     required this.mealAllowance,
     required this.totalEarnings,
-    this.status = 'PENDING',
+    this.status = 'pending',
     this.approvedBy,
     this.approverName,
     this.approvedAt,
@@ -74,30 +84,38 @@ class OvertimeRequestEntity {
     this.updatedAt,
   });
 
-  bool get isPending => status == 'PENDING';
-  bool get isApproved => status == 'APPROVED';
-  bool get isRejected => status == 'REJECTED';
-  bool get isWeekend => workDate.weekday == DateTime.saturday ||
-                        workDate.weekday == DateTime.sunday;
+  bool get isPending => status == 'pending';
+  bool get isApproved => status == 'approved';
+  bool get isRejected => status == 'rejected';
+
+  // Helper getter to get all involved employees
+  List<String> get allInvolvedEmployees => [
+        ...involvedEngineers,
+        ...involvedMaintenance,
+        ...involvedPostsales,
+      ];
 
   OvertimeRequestEntity copyWith({
     String? id,
     String? submittedBy,
     String? submitterName,
-    DateTime? workDate,
     DateTime? startTime,
     DateTime? endTime,
     double? totalHours,
-    String? customerName,
-    String? problemDescription,
-    String? location,
-    List<String>? employeeIds,
-    List<String>? employeeNames,
-    List<String>? workTypes,
+    bool? isWeekend,
+    String? customer,
+    String? reportedProblem,
+    List<String>? involvedEngineers,
+    List<String>? involvedMaintenance,
+    List<String>? involvedPostsales,
+    List<String>? typeOfWork,
+    String? product,
     String? severity,
-    String? rootCause,
-    String? solution,
-    String? notes,
+    String? workingDescription,
+    String? nextPossibleActivity,
+    String? version,
+    String? pic,
+    int? responseTime,
     double? calculatedEarnings,
     double? mealAllowance,
     double? totalEarnings,
@@ -115,20 +133,23 @@ class OvertimeRequestEntity {
       id: id ?? this.id,
       submittedBy: submittedBy ?? this.submittedBy,
       submitterName: submitterName ?? this.submitterName,
-      workDate: workDate ?? this.workDate,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       totalHours: totalHours ?? this.totalHours,
-      customerName: customerName ?? this.customerName,
-      problemDescription: problemDescription ?? this.problemDescription,
-      location: location ?? this.location,
-      employeeIds: employeeIds ?? this.employeeIds,
-      employeeNames: employeeNames ?? this.employeeNames,
-      workTypes: workTypes ?? this.workTypes,
+      isWeekend: isWeekend ?? this.isWeekend,
+      customer: customer ?? this.customer,
+      reportedProblem: reportedProblem ?? this.reportedProblem,
+      involvedEngineers: involvedEngineers ?? this.involvedEngineers,
+      involvedMaintenance: involvedMaintenance ?? this.involvedMaintenance,
+      involvedPostsales: involvedPostsales ?? this.involvedPostsales,
+      typeOfWork: typeOfWork ?? this.typeOfWork,
+      product: product ?? this.product,
       severity: severity ?? this.severity,
-      rootCause: rootCause ?? this.rootCause,
-      solution: solution ?? this.solution,
-      notes: notes ?? this.notes,
+      workingDescription: workingDescription ?? this.workingDescription,
+      nextPossibleActivity: nextPossibleActivity ?? this.nextPossibleActivity,
+      version: version ?? this.version,
+      pic: pic ?? this.pic,
+      responseTime: responseTime ?? this.responseTime,
       calculatedEarnings: calculatedEarnings ?? this.calculatedEarnings,
       mealAllowance: mealAllowance ?? this.mealAllowance,
       totalEarnings: totalEarnings ?? this.totalEarnings,
