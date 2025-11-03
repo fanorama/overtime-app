@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_constants.dart';
+import '../../../../core/extensions/string_extensions.dart';
 
 /// Widget untuk menampilkan status badge dengan warna
+/// NOTE: Uses extension methods for case-insensitive status comparison
+/// to ensure compatibility with any case variations from Firestore
 class StatusBadge extends StatelessWidget {
   final String status;
   final bool isEdited;
@@ -13,27 +15,17 @@ class StatusBadge extends StatelessWidget {
   });
 
   Color _getStatusColor() {
-    switch (status) {
-      case AppConstants.statusApproved:
-        return Colors.green;
-      case AppConstants.statusRejected:
-        return Colors.red;
-      case AppConstants.statusPending:
-      default:
-        return Colors.orange;
-    }
+    if (status.isApproved) return Colors.green;
+    if (status.isRejected) return Colors.red;
+    if (status.isPending) return Colors.orange;
+    return Colors.grey; // default for unknown status
   }
 
   IconData _getStatusIcon() {
-    switch (status) {
-      case AppConstants.statusApproved:
-        return Icons.check_circle;
-      case AppConstants.statusRejected:
-        return Icons.cancel;
-      case AppConstants.statusPending:
-      default:
-        return Icons.pending;
-    }
+    if (status.isApproved) return Icons.check_circle;
+    if (status.isRejected) return Icons.cancel;
+    if (status.isPending) return Icons.pending;
+    return Icons.help_outline; // default for unknown status
   }
 
   @override

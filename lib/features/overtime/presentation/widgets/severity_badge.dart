@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/extensions/string_extensions.dart';
 
 /// Widget untuk menampilkan severity badge dengan warna
+/// NOTE: Uses AppTheme and extension methods for case-insensitive severity comparison
+/// to ensure compatibility with any case variations from Firestore
 class SeverityBadge extends StatelessWidget {
   final String severity;
 
@@ -10,31 +14,15 @@ class SeverityBadge extends StatelessWidget {
   });
 
   Color _getSeverityColor() {
-    switch (severity) {
-      case 'CRITICAL':
-        return Colors.red.shade700;
-      case 'HIGH':
-        return Colors.orange.shade700;
-      case 'MEDIUM':
-        return Colors.yellow.shade700;
-      case 'LOW':
-      default:
-        return Colors.blue.shade700;
-    }
+    return AppTheme.getSeverityColor(severity);
   }
 
   IconData _getSeverityIcon() {
-    switch (severity) {
-      case 'CRITICAL':
-        return Icons.error;
-      case 'HIGH':
-        return Icons.warning;
-      case 'MEDIUM':
-        return Icons.info;
-      case 'LOW':
-      default:
-        return Icons.low_priority;
-    }
+    if (severity.isCriticalSeverity) return Icons.error;
+    if (severity.isHighSeverity) return Icons.warning;
+    if (severity.isMediumSeverity) return Icons.info;
+    if (severity.isLowSeverity) return Icons.low_priority;
+    return Icons.help_outline; // default for unknown severity
   }
 
   @override

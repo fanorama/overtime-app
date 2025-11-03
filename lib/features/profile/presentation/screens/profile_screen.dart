@@ -102,8 +102,8 @@ class ProfileScreen extends ConsumerWidget {
                         const Divider(),
                         ListTile(
                           leading: const Icon(Icons.group_add),
-                          title: const Text('Seed 5 Dummy Employees'),
-                          subtitle: const Text('Tambahkan 5 karyawan dummy ke database'),
+                          title: const Text('Seed 7 Dummy Employees'),
+                          subtitle: const Text('Tambahkan 7 karyawan dummy ke database'),
                           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                           onTap: () async {
                             final confirmed = await showDialog<bool>(
@@ -111,12 +111,14 @@ class ProfileScreen extends ConsumerWidget {
                               builder: (context) => AlertDialog(
                                 title: const Text('Seed Dummy Employees'),
                                 content: const Text(
-                                  'Akan menambahkan 5 karyawan dummy:\n'
-                                  '• Ahmad Fauzi (EMP001)\n'
-                                  '• Siti Nurhaliza (EMP002)\n'
-                                  '• Budi Santoso (EMP003)\n'
-                                  '• Dewi Lestari (EMP004)\n'
-                                  '• Rudi Hartono (EMP005)\n\n'
+                                  'Akan menambahkan 7 karyawan dummy:\n'
+                                  '• Ahmad Fauzi (EMP001) - Engineer\n'
+                                  '• Siti Nurhaliza (EMP002) - Engineer\n'
+                                  '• Budi Santoso (EMP003) - Maintenance\n'
+                                  '• Andi Wijaya (EMP006) - Maintenance\n'
+                                  '• Dewi Lestari (EMP004) - Postsales\n'
+                                  '• Rudi Hartono (EMP005) - Onsite\n'
+                                  '• Maya Sari (EMP007) - Onsite\n\n'
                                   'Lanjutkan?',
                                 ),
                                 actions: [

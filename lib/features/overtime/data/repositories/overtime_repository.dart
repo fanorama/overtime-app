@@ -265,7 +265,7 @@ class OvertimeRepository {
       );
 
       await _collection.doc(id).update({
-        'status': 'PENDING',
+        'status': AppConstants.statusPending,
         'isEdited': true,
         'editHistory': [...currentHistory, editHistory],
         'approvedBy': null,

@@ -51,8 +51,12 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "startTime",
+          "fieldPath": "submittedBy",
           "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
         }
       ]
     }

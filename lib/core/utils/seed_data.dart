@@ -11,14 +11,15 @@ class SeedData {
   SeedData({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  /// Seed 5 dummy employees
+  /// Seed 7 dummy employees with correct role positions
   Future<void> seedEmployees() async {
     final employees = [
+      // Engineers
       EmployeeEntity(
         id: '', // Will be auto-generated
         employeeId: 'EMP001',
         name: 'Ahmad Fauzi',
-        position: 'Senior Technician',
+        position: AppConstants.employeeRoleEngineer,
         department: 'Technical Support',
         baseRate: AppConstants.baseWeekdayRate,
         weekendRate: AppConstants.baseWeekendRate,
@@ -30,7 +31,7 @@ class SeedData {
         id: '',
         employeeId: 'EMP002',
         name: 'Siti Nurhaliza',
-        position: 'Field Engineer',
+        position: AppConstants.employeeRoleEngineer,
         department: 'Technical Support',
         baseRate: AppConstants.baseWeekdayRate,
         weekendRate: AppConstants.baseWeekendRate,
@@ -38,11 +39,12 @@ class SeedData {
         isActive: true,
         createdAt: DateTime.now(),
       ),
+      // Maintenance
       EmployeeEntity(
         id: '',
         employeeId: 'EMP003',
         name: 'Budi Santoso',
-        position: 'Network Administrator',
+        position: AppConstants.employeeRoleMaintenance,
         department: 'IT Infrastructure',
         baseRate: AppConstants.baseWeekdayRate,
         weekendRate: AppConstants.baseWeekendRate,
@@ -52,25 +54,51 @@ class SeedData {
       ),
       EmployeeEntity(
         id: '',
+        employeeId: 'EMP006',
+        name: 'Andi Wijaya',
+        position: AppConstants.employeeRoleMaintenance,
+        department: 'IT Infrastructure',
+        baseRate: AppConstants.baseWeekdayRate,
+        weekendRate: AppConstants.baseWeekendRate,
+        phoneNumber: '081234567895',
+        isActive: true,
+        createdAt: DateTime.now(),
+      ),
+      // Postsales
+      EmployeeEntity(
+        id: '',
         employeeId: 'EMP004',
         name: 'Dewi Lestari',
-        position: 'System Analyst',
-        department: 'IT Infrastructure',
+        position: AppConstants.employeeRolePostsales,
+        department: 'Customer Success',
         baseRate: AppConstants.baseWeekdayRate,
         weekendRate: AppConstants.baseWeekendRate,
         phoneNumber: '081234567893',
         isActive: true,
         createdAt: DateTime.now(),
       ),
+      // Onsite
       EmployeeEntity(
         id: '',
         employeeId: 'EMP005',
         name: 'Rudi Hartono',
-        position: 'Database Administrator',
-        department: 'IT Infrastructure',
+        position: AppConstants.employeeRoleOnsite,
+        department: 'Field Operations',
         baseRate: AppConstants.baseWeekdayRate,
         weekendRate: AppConstants.baseWeekendRate,
         phoneNumber: '081234567894',
+        isActive: true,
+        createdAt: DateTime.now(),
+      ),
+      EmployeeEntity(
+        id: '',
+        employeeId: 'EMP007',
+        name: 'Maya Sari',
+        position: AppConstants.employeeRoleOnsite,
+        department: 'Field Operations',
+        baseRate: AppConstants.baseWeekdayRate,
+        weekendRate: AppConstants.baseWeekendRate,
+        phoneNumber: '081234567896',
         isActive: true,
         createdAt: DateTime.now(),
       ),

@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../domain/entities/overtime_request_entity.dart';
 import 'status_badge.dart';
 import 'severity_badge.dart';
+import '../../../../core/extensions/string_extensions.dart';
 
 /// Widget untuk menampilkan overtime request dalam bentuk card
 class OvertimeCard extends StatelessWidget {
@@ -156,7 +157,7 @@ class OvertimeCard extends StatelessWidget {
                   ),
 
                   // Earnings (only show if approved)
-                  if (request.status == 'APPROVED')
+                  if (request.status.isApproved)
                     Text(
                       currencyFormat.format(request.totalEarnings),
                       style: const TextStyle(

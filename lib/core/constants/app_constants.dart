@@ -14,6 +14,8 @@ class AppConstants {
   static const String roleManager = 'manager';
 
   // Overtime Status
+  // NOTE: Status values use lowercase in app code. Firestore security rules
+  // perform case-insensitive comparison using .lower() to ensure compatibility.
   static const String statusPending = 'pending';
   static const String statusApproved = 'approved';
   static const String statusRejected = 'rejected';

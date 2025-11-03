@@ -49,6 +49,9 @@ service cloud.firestore {
     // - Users can create requests (submittedBy must match their uid)
     // - Users can update their own PENDING or REJECTED requests
     // - Managers can update any request (for approval/rejection)
+    //
+    // NOTE: Status comparisons use .lower() for case-insensitive matching
+    // to ensure compatibility with lowercase status values from the app
     match /overtime_requests/{requestId} {
       allow read: if isAuthenticated() && (
         resource.data.submittedBy == request.auth.uid ||
@@ -57,12 +60,12 @@ service cloud.firestore {
 
       allow create: if isAuthenticated() &&
         request.resource.data.submittedBy == request.auth.uid &&
-        request.resource.data.status == 'PENDING';
+        request.resource.data.status.lower() == 'pending';
 
       allow update: if isAuthenticated() && (
         // Employee can update their own pending/rejected requests
         (resource.data.submittedBy == request.auth.uid &&
-         resource.data.status in ['PENDING', 'REJECTED']) ||
+         resource.data.status.lower() in ['pending', 'rejected']) ||
         // Manager can approve/reject any request
         isManager()
       );

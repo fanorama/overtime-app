@@ -6,30 +6,45 @@ Script untuk menambahkan data dummy ke Firestore untuk keperluan testing dan dev
 ## Dummy Employees
 
 ### Data yang akan ditambahkan:
+
+#### Engineers (2 orang)
 1. **Ahmad Fauzi** (EMP001)
-   - Position: Senior Technician
+   - Position: engineer
    - Department: Technical Support
    - Phone: 081234567890
 
 2. **Siti Nurhaliza** (EMP002)
-   - Position: Field Engineer
+   - Position: engineer
    - Department: Technical Support
    - Phone: 081234567891
 
+#### Maintenance (2 orang)
 3. **Budi Santoso** (EMP003)
-   - Position: Network Administrator
+   - Position: maintenance
    - Department: IT Infrastructure
    - Phone: 081234567892
 
-4. **Dewi Lestari** (EMP004)
-   - Position: System Analyst
+4. **Andi Wijaya** (EMP006)
+   - Position: maintenance
    - Department: IT Infrastructure
+   - Phone: 081234567895
+
+#### Postsales (1 orang)
+5. **Dewi Lestari** (EMP004)
+   - Position: postsales
+   - Department: Customer Success
    - Phone: 081234567893
 
-5. **Rudi Hartono** (EMP005)
-   - Position: Database Administrator
-   - Department: IT Infrastructure
+#### Onsite (2 orang)
+6. **Rudi Hartono** (EMP005)
+   - Position: onsite
+   - Department: Field Operations
    - Phone: 081234567894
+
+7. **Maya Sari** (EMP007)
+   - Position: onsite
+   - Department: Field Operations
+   - Phone: 081234567896
 
 ### Rates
 Semua karyawan menggunakan rate standar:
@@ -42,7 +57,7 @@ Semua karyawan menggunakan rate standar:
 1. Login sebagai **Manager**
 2. Buka menu **Profile** (tab paling kanan)
 3. Scroll ke section **Developer Tools** (card kuning)
-4. Tap **"Seed 5 Dummy Employees"**
+4. Tap **"Seed 7 Dummy Employees"**
 5. Konfirmasi dialog
 6. Tunggu proses selesai
 
@@ -69,13 +84,15 @@ await seedData.clearEmployees();
 ✅ Added: Ahmad Fauzi (EMP001)
 ✅ Added: Siti Nurhaliza (EMP002)
 ✅ Added: Budi Santoso (EMP003)
+✅ Added: Andi Wijaya (EMP006)
 ✅ Added: Dewi Lestari (EMP004)
 ✅ Added: Rudi Hartono (EMP005)
+✅ Added: Maya Sari (EMP007)
 
 📊 Summary:
-   Added: 5 employees
+   Added: 7 employees
    Skipped: 0 employees
-   Total: 5 employees processed
+   Total: 7 employees processed
 ```
 
 ## Notes

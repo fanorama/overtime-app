@@ -1,3 +1,5 @@
+import '../../../../core/extensions/string_extensions.dart';
+
 /// Overtime request entity - Updated to match design schema
 class OvertimeRequestEntity {
   final String id;
@@ -84,9 +86,10 @@ class OvertimeRequestEntity {
     this.updatedAt,
   });
 
-  bool get isPending => status == 'pending';
-  bool get isApproved => status == 'approved';
-  bool get isRejected => status == 'rejected';
+  // Use extension methods for case-insensitive status checks
+  bool get isPending => status.isPending;
+  bool get isApproved => status.isApproved;
+  bool get isRejected => status.isRejected;
 
   // Helper getter to get all involved employees
   List<String> get allInvolvedEmployees => [

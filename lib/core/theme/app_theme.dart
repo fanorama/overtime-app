@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../extensions/string_extensions.dart';
 
 /// Application theme configuration
 class AppTheme {
@@ -174,33 +175,20 @@ class AppTheme {
     );
   }
 
-  // Get severity color
+  // Get severity color (case-insensitive comparison via extension methods)
   static Color getSeverityColor(String severity) {
-    switch (severity) {
-      case 'Low':
-        return severityLow;
-      case 'Medium':
-        return severityMedium;
-      case 'High':
-        return severityHigh;
-      case 'Critical':
-        return severityCritical;
-      default:
-        return textSecondary;
-    }
+    if (severity.isLowSeverity) return severityLow;
+    if (severity.isMediumSeverity) return severityMedium;
+    if (severity.isHighSeverity) return severityHigh;
+    if (severity.isCriticalSeverity) return severityCritical;
+    return textSecondary;
   }
 
-  // Get status color
+  // Get status color (case-insensitive comparison via extension methods)
   static Color getStatusColor(String status) {
-    switch (status) {
-      case 'PENDING':
-        return statusPending;
-      case 'APPROVED':
-        return statusApproved;
-      case 'REJECTED':
-        return statusRejected;
-      default:
-        return textSecondary;
-    }
+    if (status.isPending) return statusPending;
+    if (status.isApproved) return statusApproved;
+    if (status.isRejected) return statusRejected;
+    return textSecondary;
   }
 }
