@@ -4,13 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:overtime_app/core/utils/earnings_calculator.dart';
 import 'package:overtime_app/core/utils/date_time_utils.dart';
 import 'package:overtime_app/core/validators/form_validators.dart';
+import 'package:overtime_app/core/constants/app_constants.dart';
 
 void main() {
   group('Core Utilities Tests', () {
     test('Earnings calculator - weekday calculation', () {
       final workDate = DateTime(2025, 11, 3); // Monday
       const hours = 4.0;
-      const workTypes = ['Installation'];
+      const workTypes = [AppConstants.workTypeCall]; // 1.2 multiplier
 
       final result = EarningsCalculator.calculate(
         workDate: workDate,
@@ -18,7 +19,8 @@ void main() {
         workTypes: workTypes,
       );
 
-      expect(result['total'], 265000); // 240000 + 25000
+      // Expected: 4 hours × 50000 (weekday) × 1.2 (Call) = 240000 + 25000 = 265000
+      expect(result['total'], 265000);
     });
 
     test('Date utils - weekend detection', () {

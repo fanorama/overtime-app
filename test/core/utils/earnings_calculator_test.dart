@@ -9,7 +9,7 @@ void main() {
         // Arrange
         final workDate = DateTime(2025, 11, 3); // Monday
         const hours = 4.0;
-        const workTypes = [AppConstants.workTypeInstallation];
+        const workTypes = <String>[AppConstants.workTypeCall];
 
         // Act
         final result = EarningsCalculator.calculate(
@@ -20,7 +20,7 @@ void main() {
 
         // Assert
         expect(result['hourlyRate'], AppConstants.baseWeekdayRate);
-        expect(result['multiplier'], 1.2); // Installation multiplier
+        expect(result['multiplier'], 1.2); // Call multiplier
         expect(result['baseEarnings'], 50000 * 4.0 * 1.2); // 240,000
         expect(result['mealAllowance'], AppConstants.mealAllowance);
         expect(result['total'], 240000 + 25000); // 265,000
@@ -30,7 +30,7 @@ void main() {
         // Arrange
         final workDate = DateTime(2025, 11, 1); // Saturday
         const hours = 3.0;
-        const workTypes = [AppConstants.workTypeRepair];
+        const workTypes = <String>[AppConstants.workTypeUnplanned];
 
         // Act
         final result = EarningsCalculator.calculate(
@@ -41,7 +41,7 @@ void main() {
 
         // Assert
         expect(result['hourlyRate'], AppConstants.baseWeekendRate);
-        expect(result['multiplier'], 1.5); // Repair multiplier
+        expect(result['multiplier'], 1.5); // Unplanned multiplier
         expect(result['baseEarnings'], 75000 * 3.0 * 1.5); // 337,500
         expect(result['total'], 337500 + 25000); // 362,500
       });
@@ -51,10 +51,10 @@ void main() {
         // Arrange
         final workDate = DateTime(2025, 11, 3);
         const hours = 2.0;
-        const workTypes = [
-          AppConstants.workTypePreventive, // 1.0
-          AppConstants.workTypeRepair, // 1.5
-          AppConstants.workTypeInstallation, // 1.2
+        const workTypes = <String>[
+          AppConstants.workTypeOvertime, // 1.0
+          AppConstants.workTypeUnplanned, // 1.5
+          AppConstants.workTypeCall, // 1.2
         ];
 
         // Act
@@ -65,7 +65,7 @@ void main() {
         );
 
         // Assert
-        expect(result['multiplier'], 1.5); // Highest is Repair
+        expect(result['multiplier'], 1.5); // Highest is Unplanned
       });
 
       test('should default to 1.0 multiplier for empty work types', () {
@@ -89,7 +89,7 @@ void main() {
         // Arrange
         final workDate = DateTime(2025, 11, 3);
         const hours = 1.0;
-        const workTypes = [AppConstants.workTypeMonitoring];
+        const workTypes = <String>[AppConstants.workTypeOvertime];
 
         // Act
         final result = EarningsCalculator.calculate(
