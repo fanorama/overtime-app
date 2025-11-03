@@ -19,13 +19,13 @@ class RetryConfig {
 
   static const RetryConfig defaultConfig = RetryConfig();
   static const RetryConfig quickRetry = RetryConfig(
-    maxAttempts = 2,
-    initialDelay = Duration(milliseconds: 500),
+    maxAttempts: 2,
+    initialDelay: Duration(milliseconds: 500),
   );
   static const RetryConfig aggressiveRetry = RetryConfig(
-    maxAttempts = 5,
-    initialDelay = Duration(milliseconds: 500),
-    maxDelay = Duration(seconds: 30),
+    maxAttempts: 5,
+    initialDelay: Duration(milliseconds: 500),
+    maxDelay: Duration(seconds: 30),
   );
 }
 

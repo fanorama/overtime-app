@@ -84,6 +84,40 @@ Total = ${formatCurrency(total)}
 ''';
   }
 
+  /// Calculate earnings based on total hours, weekend status, work types, and employee count
+  ///
+  /// This method is used by SubmitOvertimeUseCase for earnings validation
+  static double calculateEarnings({
+    required double totalHours,
+    required bool isWeekend,
+    required List<String> workTypes,
+    required int employeeCount,
+  }) {
+    if (employeeCount == 0 || workTypes.isEmpty || totalHours <= 0) {
+      return 0.0;
+    }
+
+    // Determine base rate based on weekend status
+    final double baseRate = isWeekend
+        ? AppConstants.baseWeekendRate
+        : AppConstants.baseWeekdayRate;
+
+    // Get highest multiplier from selected work types
+    final double multiplier = _getHighestMultiplier(workTypes);
+
+    // Calculate base earnings per employee
+    final double baseEarningsPerEmployee = totalHours * baseRate * multiplier;
+
+    // Fixed meal allowance per employee
+    final double mealAllowancePerEmployee = AppConstants.mealAllowance;
+
+    // Total for all employees
+    final double totalBaseEarnings = baseEarningsPerEmployee * employeeCount;
+    final double totalMealAllowance = mealAllowancePerEmployee * employeeCount;
+
+    return totalBaseEarnings + totalMealAllowance;
+  }
+
   /// Calculate total earnings for multiple employees between start and end time
   static double calculateTotalEarnings({
     required DateTime startTime,

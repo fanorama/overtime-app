@@ -8,6 +8,7 @@ import '../providers/overtime_provider.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/earnings_calculator.dart';
+import '../../../../core/extensions/text_editing_controller_extension.dart';
 import '../widgets/sections/overtime_time_section.dart';
 import '../widgets/sections/overtime_customer_section.dart';
 import '../widgets/sections/overtime_involved_people_section.dart';
@@ -54,7 +55,7 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
   final Set<String> _selectedWorkTypes = {};
   String _selectedSeverity = AppConstants.severityMedium;
 
-  final bool _isLoading = false;
+  bool _isSaving = false; // Changed from final _isLoading to mutable _isSaving
   bool get _isEditMode => widget.overtimeRequest != null;
 
   // Calculated earnings
@@ -253,6 +254,9 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
 
 
   Future<void> _saveOvertimeRequest() async {
+    // Prevent double-tap
+    if (_isSaving) return;
+
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -262,6 +266,9 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
       );
       return;
     }
+
+    // Set loading state
+    setState(() => _isSaving = true);
 
     // Validate total employees from all 3 categories
     final totalEmployees = _selectedEngineers.length +
@@ -293,6 +300,9 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
       final shouldProceed = await _showEditApprovedWarning(widget.overtimeRequest!.status);
       if (shouldProceed != true) return;
     }
+
+    // Check if widget is still mounted after async operation
+    if (!mounted) return;
 
     final authState = ref.read(authControllerProvider);
     if (authState.user == null) {
@@ -333,6 +343,7 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
     );
 
     // Create or update request entity
+    // SECURITY: All text inputs are sanitized using extension method
     final request = OvertimeRequestEntity(
       id: _isEditMode ? widget.overtimeRequest!.id : '',
       submittedBy: authState.user!.id,
@@ -341,24 +352,24 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
       endTime: endDateTime,
       totalHours: totalHours,
       isWeekend: isWeekend,
-      customer: _customerController.text.trim(),
-      reportedProblem: _reportedProblemController.text.trim(),
+      customer: _customerController.sanitizedText,
+      reportedProblem: _reportedProblemController.sanitizedMultilineText,
       involvedEngineers: _selectedEngineers.toList(),
       involvedMaintenance: _selectedMaintenance.toList(),
       involvedPostsales: _selectedPostsales.toList(),
       typeOfWork: _selectedWorkTypes.toList(),
-      product: _productController.text.trim(),
+      product: _productController.sanitizedText,
       severity: _selectedSeverity,
-      workingDescription: _workingDescriptionController.text.trim(),
+      workingDescription: _workingDescriptionController.sanitizedMultilineText,
       nextPossibleActivity: _nextActivityController.text.trim().isEmpty
           ? null
-          : _nextActivityController.text.trim(),
+          : _nextActivityController.sanitizedMultilineText,
       version: _versionController.text.trim().isEmpty
           ? null
-          : _versionController.text.trim(),
+          : _versionController.sanitizedText,
       pic: _picController.text.trim().isEmpty
           ? null
-          : _picController.text.trim(),
+          : _picController.sanitizedText,
       responseTime: int.tryParse(_responseTimeController.text) ?? 0,
       calculatedEarnings: earnings,
       mealAllowance: _mealAllowance,
@@ -393,6 +404,9 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
     }
 
     if (!mounted) return;
+
+    // Clear loading state
+    setState(() => _isSaving = false);
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -577,9 +591,9 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
 
               // Submit Button
               CustomButton(
-                onPressed: _isLoading ? null : _saveOvertimeRequest,
+                onPressed: _isSaving ? null : _saveOvertimeRequest,
                 text: _isEditMode ? 'Simpan Perubahan' : 'Submit Lembur',
-                isLoading: _isLoading,
+                isLoading: _isSaving,
               ),
             ],
           ),

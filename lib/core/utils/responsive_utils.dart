@@ -122,7 +122,7 @@ class ResponsiveUtils {
 
   /// Get text scale factor
   static double getTextScaleFactor(BuildContext context) {
-    return MediaQuery.of(context).textScaleFactor;
+    return MediaQuery.textScalerOf(context).scale(1.0);
   }
 }
 

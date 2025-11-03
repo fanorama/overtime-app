@@ -42,7 +42,7 @@ class SeverityBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: _getSeverityColor().withOpacity(0.1),
+        color: _getSeverityColor().withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: _getSeverityColor(),

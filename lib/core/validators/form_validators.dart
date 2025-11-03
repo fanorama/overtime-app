@@ -1,6 +1,10 @@
 import '../constants/app_constants.dart';
+import '../constants/validation_constants.dart';
+import '../security/input_sanitizer.dart';
 
 /// Form validation utilities
+///
+/// SECURITY: All validators now check for potentially dangerous input patterns
 class FormValidators {
   /// Validate required field
   static String? required(String? value, {String? fieldName}) {
@@ -45,14 +49,14 @@ class FormValidators {
     if (value == null || value.trim().isEmpty) {
       return 'Username wajib diisi';
     }
-    if (value.length < 3) {
-      return 'Username minimal 3 karakter';
+    if (value.length < ValidationConstants.minUsernameLength) {
+      return 'Username minimal ${ValidationConstants.minUsernameLength} karakter';
     }
-    if (value.length > 20) {
-      return 'Username maksimal 20 karakter';
+    if (value.length > ValidationConstants.maxUsernameLength) {
+      return 'Username maksimal ${ValidationConstants.maxUsernameLength} karakter';
     }
     if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value)) {
-      return 'Username hanya boleh mengandung huruf, angka, dan underscore';
+      return ValidationConstants.invalidUsernameError;
     }
     return null;
   }
@@ -62,11 +66,11 @@ class FormValidators {
     if (value == null || value.isEmpty) {
       return 'Password wajib diisi';
     }
-    if (value.length < 6) {
-      return 'Password minimal 6 karakter';
+    if (value.length < ValidationConstants.minPasswordLength) {
+      return ValidationConstants.passwordTooShortError;
     }
-    if (value.length > 50) {
-      return 'Password maksimal 50 karakter';
+    if (value.length > ValidationConstants.maxPasswordLength) {
+      return 'Password maksimal ${ValidationConstants.maxPasswordLength} karakter';
     }
     return null;
   }
@@ -77,7 +81,7 @@ class FormValidators {
       return 'Konfirmasi password wajib diisi';
     }
     if (value != password) {
-      return 'Password tidak cocok';
+      return ValidationConstants.passwordMismatchError;
     }
     return null;
   }
@@ -120,13 +124,13 @@ class FormValidators {
       return 'Waktu mulai dan selesai wajib diisi';
     }
     if (endTime.isBefore(startTime) || endTime.isAtSameMomentAs(startTime)) {
-      return 'Waktu selesai harus lebih besar dari waktu mulai';
+      return ValidationConstants.invalidTimeRangeError;
     }
 
-    // Validasi maksimal durasi (misal 24 jam)
+    // Validasi maksimal durasi
     final duration = endTime.difference(startTime);
-    if (duration.inHours > 24) {
-      return 'Durasi lembur tidak boleh lebih dari 24 jam';
+    if (duration.inHours > ValidationConstants.maxOvertimeDurationHours) {
+      return ValidationConstants.durationTooLongError;
     }
 
     return null;
@@ -149,10 +153,10 @@ class FormValidators {
   /// Validate employee selection
   static String? employeeSelection(List<String>? selectedEmployees) {
     if (selectedEmployees == null || selectedEmployees.isEmpty) {
-      return 'Minimal pilih ${AppConstants.minEmployeeSelection} karyawan';
+      return ValidationConstants.noEmployeesError;
     }
-    if (selectedEmployees.length > 50) {
-      return 'Maksimal pilih 50 karyawan';
+    if (selectedEmployees.length > ValidationConstants.maxEmployeeSelection) {
+      return ValidationConstants.tooManyEmployeesError;
     }
     return null;
   }
@@ -160,7 +164,7 @@ class FormValidators {
   /// Validate work type selection
   static String? workTypeSelection(List<String>? selectedWorkTypes) {
     if (selectedWorkTypes == null || selectedWorkTypes.isEmpty) {
-      return 'Minimal pilih 1 jenis pekerjaan';
+      return ValidationConstants.noWorkTypesError;
     }
     return null;
   }
@@ -192,5 +196,87 @@ class FormValidators {
       return '${fieldName ?? 'Data'} tidak boleh kosong';
     }
     return null;
+  }
+
+  // ===== SECURITY VALIDATORS =====
+
+  /// Validate input is safe (no XSS, injection, etc.)
+  ///
+  /// SECURITY: Check for potentially dangerous patterns
+  static String? safeInput(String? value, {String? fieldName}) {
+    if (value == null || value.isEmpty) return null;
+
+    if (!InputSanitizer.isSafe(value)) {
+      return '${fieldName ?? 'Input'} mengandung karakter tidak diperbolehkan';
+    }
+
+    return null;
+  }
+
+  /// Validate and sanitize text field
+  ///
+  /// Returns error if unsafe, otherwise null
+  static String? safeTextField(String? value, {String? fieldName}) {
+    // Check if required
+    if (value == null || value.trim().isEmpty) {
+      return '${fieldName ?? 'Field'} wajib diisi';
+    }
+
+    // Check safety
+    if (!InputSanitizer.isSafe(value)) {
+      return '${fieldName ?? 'Field'} mengandung karakter tidak diperbolehkan';
+    }
+
+    return null;
+  }
+
+  /// Validate customer name with safety check
+  static String? customerName(String? value) {
+    final requiredError = requiredWithMaxLength(
+      value,
+      fieldName: 'Nama customer',
+      maxLength: AppConstants.maxCustomerLength,
+    );
+    if (requiredError != null) return requiredError;
+
+    return safeInput(value, fieldName: 'Nama customer');
+  }
+
+  /// Validate problem description with safety check
+  static String? reportedProblem(String? value) {
+    final requiredError = requiredWithMinLength(
+      value,
+      fieldName: 'Reported Problem',
+      minLength: AppConstants.minReportedProblemLength,
+    );
+    if (requiredError != null) return requiredError;
+
+    final maxError = requiredWithMaxLength(
+      value,
+      fieldName: 'Reported Problem',
+      maxLength: AppConstants.maxReportedProblemLength,
+    );
+    if (maxError != null) return maxError;
+
+    return safeInput(value, fieldName: 'Reported Problem');
+  }
+
+  /// Validate work description with safety check
+  static String? workDescription(String? value) {
+    final requiredError = requiredWithMinLength(
+      value,
+      fieldName: 'Deskripsi pekerjaan',
+      minLength: AppConstants.minWorkingDescriptionLength,
+    );
+    if (requiredError != null) return requiredError;
+
+    final maxError = requiredWithMaxLength(
+      value,
+      fieldName: 'Deskripsi pekerjaan',
+      maxLength: AppConstants.maxWorkingDescriptionLength,
+    );
+    if (maxError != null) return maxError;
+
+    return safeInput(value, fieldName: 'Deskripsi pekerjaan');
   }
 }

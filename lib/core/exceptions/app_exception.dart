@@ -220,3 +220,20 @@ class FirestoreException extends AppException {
     );
   }
 }
+
+/// Exception untuk error yang tidak diketahui atau tidak terdefinisi
+class UnknownException extends AppException {
+  const UnknownException({
+    required super.message,
+    super.code,
+    super.originalError,
+  });
+
+  factory UnknownException.fromError(dynamic error) {
+    return UnknownException(
+      message: 'Terjadi kesalahan yang tidak diketahui: ${error.toString()}',
+      code: 'UNKNOWN_ERROR',
+      originalError: error,
+    );
+  }
+}

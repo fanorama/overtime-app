@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/employee_repository.dart';
 import '../../domain/entities/employee_entity.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../../core/utils/app_logger.dart';
 
 /// Provider untuk EmployeeRepository
 final employeeRepositoryProvider = Provider<EmployeeRepository>((ref) {
@@ -14,19 +15,19 @@ final employeesStreamProvider = StreamProvider<List<EmployeeEntity>>((ref) {
   // Tunggu auth state dulu untuk menghindari race condition
   final authState = ref.watch(authControllerProvider);
 
-  print('🔐 [EmployeesStreamProvider] Auth state check:');
-  print('   - Is Authenticated: ${authState.isAuthenticated}');
-  print('   - Is Loading: ${authState.isLoading}');
-  print('   - User: ${authState.user?.username ?? "null"}');
+  appLogger.d('🔐 [EmployeesStreamProvider] Auth state check:');
+  appLogger.d('   - Is Authenticated: ${authState.isAuthenticated}');
+  appLogger.d('   - Is Loading: ${authState.isLoading}');
+  appLogger.d('   - User: ${authState.user?.username ?? "null"}');
 
   // Jika belum authenticated, return empty stream
   if (!authState.isAuthenticated) {
-    print('⚠️  [EmployeesStreamProvider] User not authenticated, returning empty stream');
+    appLogger.w('⚠️  [EmployeesStreamProvider] User not authenticated, returning empty stream');
     return Stream.value([]);
   }
 
   // User sudah authenticated, fetch employees
-  print('✅ [EmployeesStreamProvider] User authenticated, fetching employees...');
+  appLogger.d('✅ [EmployeesStreamProvider] User authenticated, fetching employees...');
   final repository = ref.watch(employeeRepositoryProvider);
   return repository.getAllEmployees();
 });

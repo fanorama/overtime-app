@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../exceptions/app_exception.dart';
 
@@ -78,11 +77,7 @@ class ErrorHandler {
     }
 
     // Default error
-    return AppException(
-      message: 'Terjadi kesalahan yang tidak diketahui: ${error.toString()}',
-      code: 'UNKNOWN_ERROR',
-      originalError: error,
-    );
+    return UnknownException.fromError(error);
   }
 
   /// Get user-friendly error message

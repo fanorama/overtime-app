@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/employee/data/models/employee_model.dart';
 import '../../features/employee/domain/entities/employee_entity.dart';
 import '../constants/app_constants.dart';
+import 'app_logger.dart';
 
 /// Utility untuk seed dummy data ke Firestore
 class SeedData {
@@ -91,17 +92,17 @@ class SeedData {
         final model = EmployeeModel.fromEntity(employee);
         await collection.add(model.toFirestore());
         added++;
-        print('✅ Added: ${employee.name} (${employee.employeeId})');
+        appLogger.i('✅ Added: ${employee.name} (${employee.employeeId})');
       } else {
         skipped++;
-        print('⏭️  Skipped: ${employee.name} (${employee.employeeId}) - already exists');
+        appLogger.i('⏭️  Skipped: ${employee.name} (${employee.employeeId}) - already exists');
       }
     }
 
-    print('\n📊 Summary:');
-    print('   Added: $added employees');
-    print('   Skipped: $skipped employees');
-    print('   Total: ${employees.length} employees processed');
+    appLogger.i('\n📊 Summary:');
+    appLogger.i('   Added: $added employees');
+    appLogger.i('   Skipped: $skipped employees');
+    appLogger.i('   Total: ${employees.length} employees processed');
   }
 
   /// Clear all employees (untuk testing)
@@ -115,6 +116,6 @@ class SeedData {
       deleted++;
     }
 
-    print('🗑️  Deleted $deleted employees');
+    appLogger.i('🗑️  Deleted $deleted employees');
   }
 }

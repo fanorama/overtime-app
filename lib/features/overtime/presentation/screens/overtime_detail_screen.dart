@@ -87,7 +87,7 @@ class OvertimeDetailScreen extends ConsumerWidget {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

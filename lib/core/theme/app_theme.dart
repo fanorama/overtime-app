@@ -161,7 +161,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(8),
         ),
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),

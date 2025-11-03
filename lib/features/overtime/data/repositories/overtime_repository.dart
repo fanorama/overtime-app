@@ -1,14 +1,27 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/overtime_request_model.dart';
 import '../../domain/entities/overtime_request_entity.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/security/authorization_helper.dart';
+import '../../../../core/extensions/string_extensions.dart';
 
 /// Repository untuk mengelola data overtime requests di Firestore
+///
+/// SECURITY: Repository ini menggunakan [AuthorizationHelper] untuk memverifikasi
+/// permission sebelum melakukan operasi sensitive seperti approve, reject, update, delete.
 class OvertimeRepository {
   final FirebaseFirestore _firestore;
+  final AuthorizationHelper _authHelper;
 
-  OvertimeRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  OvertimeRepository({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _authHelper = AuthorizationHelper(
+          firestore: firestore,
+          auth: auth,
+        );
 
   /// Get collection reference
   CollectionReference get _collection =>
@@ -92,7 +105,7 @@ class OvertimeRepository {
 
   /// Get pending requests (untuk manager)
   Stream<List<OvertimeRequestEntity>> getPendingRequests() {
-    return getRequestsByStatus('PENDING');
+    return getRequestsByStatus(AppConstants.statusPending);
   }
 
   /// Get overtime request by ID
@@ -136,8 +149,18 @@ class OvertimeRepository {
   }
 
   /// Update overtime request
+  ///
+  /// SECURITY: Verifies user permission before update
+  /// - Owner can update pending requests
+  /// - Manager can only update pending requests
   Future<void> updateRequest(String id, OvertimeRequestEntity request) async {
     try {
+      // SECURITY CHECK: Verify permission
+      await _authHelper.verifyCanUpdateRequest(
+        requestId: id,
+        userId: request.submittedBy,
+      );
+
       final model = OvertimeRequestModel.fromEntity(request);
       final data = model.toFirestore();
 
@@ -151,8 +174,22 @@ class OvertimeRepository {
   }
 
   /// Delete overtime request
+  ///
+  /// SECURITY: Only owner can delete, and only if status is pending
   Future<void> deleteRequest(String id) async {
     try {
+      // SECURITY CHECK: Get current user
+      final currentUserId = _authHelper.currentUserId;
+      if (currentUserId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // SECURITY CHECK: Verify permission
+      await _authHelper.verifyCanDeleteRequest(
+        requestId: id,
+        userId: currentUserId,
+      );
+
       await _collection.doc(id).delete();
     } catch (e) {
       throw Exception('Failed to delete overtime request: $e');
@@ -160,14 +197,23 @@ class OvertimeRepository {
   }
 
   /// Approve overtime request
+  ///
+  /// SECURITY: Verifies approver is manager and request is pending
   Future<void> approveRequest(
     String id,
     String approverId,
     String approverName,
   ) async {
     try {
+      // SECURITY CHECK: Verify permission to approve
+      await _authHelper.verifyCanApproveRequest(
+        requestId: id,
+        approverId: approverId,
+      );
+
+      // Proceed with approval
       await _collection.doc(id).update({
-        'status': 'APPROVED',
+        'status': AppConstants.statusApproved,
         'approvedBy': approverId,
         'approverName': approverName,
         'approvedAt': FieldValue.serverTimestamp(),
@@ -180,6 +226,8 @@ class OvertimeRepository {
   }
 
   /// Reject overtime request
+  ///
+  /// SECURITY: Verifies approver is manager and request is pending
   Future<void> rejectRequest(
     String id,
     String approverId,
@@ -187,8 +235,15 @@ class OvertimeRepository {
     String rejectionReason,
   ) async {
     try {
+      // SECURITY CHECK: Verify permission to reject
+      await _authHelper.verifyCanApproveRequest(
+        requestId: id,
+        approverId: approverId,
+      );
+
+      // Proceed with rejection
       await _collection.doc(id).update({
-        'status': 'REJECTED',
+        'status': AppConstants.statusRejected,
         'approvedBy': approverId,
         'approverName': approverName,
         'approvedAt': FieldValue.serverTimestamp(),
@@ -249,13 +304,14 @@ class OvertimeRepository {
 
       for (final request in requests) {
         totalHours += request.totalHours;
-        final statusUpper = request.status.toUpperCase();
-        if (statusUpper == 'APPROVED') {
+
+        // Use extension for status comparison (case-insensitive)
+        if (request.status.isApproved) {
           totalEarnings += request.totalEarnings;
           approvedCount++;
-        } else if (statusUpper == 'PENDING') {
+        } else if (request.status.isPending) {
           pendingCount++;
-        } else if (statusUpper == 'REJECTED') {
+        } else if (request.status.isRejected) {
           rejectedCount++;
         }
       }
@@ -309,13 +365,13 @@ class OvertimeRepository {
       for (final request in requests) {
         totalHours += request.totalHours;
 
-        final statusUpper = request.status.toUpperCase();
-        if (statusUpper == 'APPROVED') {
+        // Use extension for status comparison (case-insensitive)
+        if (request.status.isApproved) {
           totalEarnings += request.totalEarnings;
           approvedCount++;
-        } else if (statusUpper == 'PENDING') {
+        } else if (request.status.isPending) {
           pendingCount++;
-        } else if (statusUpper == 'REJECTED') {
+        } else if (request.status.isRejected) {
           rejectedCount++;
         }
 
@@ -327,10 +383,10 @@ class OvertimeRepository {
         employeeHours[request.submittedBy] =
             employeeHours[request.submittedBy]! + request.totalHours;
 
-        // Track severity
-        final severityUpper = request.severity.toUpperCase();
-        severityBreakdown[severityUpper] =
-            (severityBreakdown[severityUpper] ?? 0) + 1;
+        // Track severity - normalize to uppercase for map key
+        final severityKey = request.severity.toUpperCase();
+        severityBreakdown[severityKey] =
+            (severityBreakdown[severityKey] ?? 0) + 1;
       }
 
       // Get top 5 employees by hours
