@@ -288,7 +288,25 @@ service cloud.firestore {
            request.resource.data.approvedBy == getCurrentUserId() &&
            isValidString(request.resource.data.approverName) &&
            'approvedAt' in request.resource.data.keys() &&
-           isValidString(request.resource.data.rejectionReason))))
+           isValidString(request.resource.data.rejectionReason)))) ||
+
+        // SCENARIO 3: Manager editing pending request data (not for approve/reject)
+        (userIsManager(request.auth.uid) &&
+         // Request must be pending
+         isPendingRequest(resource.data) &&
+         // Status must stay pending
+         request.resource.data.status == 'pending' &&
+         // Cannot change ownership
+         request.resource.data.submittedBy == resource.data.submittedBy &&
+         // Validate calculated fields haven't been tampered
+         validateCalculatedFields() &&
+         // Validate all required fields
+         validateOvertimeRequestData() &&
+         // No approval fields should be present (still pending)
+         !('approvedBy' in request.resource.data.keys()) &&
+         !('approverName' in request.resource.data.keys()) &&
+         !('approvedAt' in request.resource.data.keys()) &&
+         !('rejectionReason' in request.resource.data.keys()))
       );
 
       // DELETE RULES

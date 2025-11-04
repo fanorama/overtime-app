@@ -223,6 +223,10 @@ class OvertimeRepository {
       final model = OvertimeRequestModel.fromEntity(request);
       final data = model.toFirestore();
 
+      // ✅ CRITICAL FIX: Remove immutable fields for UPDATE operation
+      // createdAt should never be modified after creation
+      data.remove('createdAt');
+
       // Update timestamp
       data['updatedAt'] = FieldValue.serverTimestamp();
 
