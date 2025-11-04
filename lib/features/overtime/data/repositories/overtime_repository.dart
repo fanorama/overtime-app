@@ -209,7 +209,11 @@ class OvertimeRepository {
   /// - Manager can only update pending requests
   Future<void> updateRequest(String id, OvertimeRequestEntity request) async {
     try {
+      print('🔶 [UPDATE REQUEST] Starting updateRequest for doc ID: $id');
+      print('🔶 [UPDATE REQUEST] Request submittedBy: ${request.submittedBy}, status: ${request.status}');
+
       // SECURITY CHECK: Verify permission
+      print('🔶 [UPDATE REQUEST] Verifying permissions...');
       final currentUserId = _authHelper.currentUserId;
       if (currentUserId == null) {
         throw Exception('User not authenticated');
@@ -219,6 +223,7 @@ class OvertimeRepository {
         requestId: id,
         userId: currentUserId, // ✅ FIX: Use current user ID, not request owner
       );
+      print('✅ [UPDATE REQUEST] Permission verified');
 
       final model = OvertimeRequestModel.fromEntity(request);
       final data = model.toFirestore();
@@ -230,8 +235,18 @@ class OvertimeRepository {
       // Update timestamp
       data['updatedAt'] = FieldValue.serverTimestamp();
 
+      print('🔶 [UPDATE REQUEST] Data fields to update: ${data.keys.toList()}');
+      print('🔶 [UPDATE REQUEST] Status: ${data['status']}, isEdited: ${data['isEdited']}');
+      print('🔶 [UPDATE REQUEST] Approval fields present: approvedBy=${data.containsKey('approvedBy')}, approverName=${data.containsKey('approverName')}, approvedAt=${data.containsKey('approvedAt')}, rejectionReason=${data.containsKey('rejectionReason')}');
+      print('🔶 [UPDATE REQUEST] Calculated earnings: ${data['calculatedEarnings']}, Meal: ${data['mealAllowance']}, Total: ${data['totalEarnings']}');
+      print('🔶 [UPDATE REQUEST] Text field lengths: reportedProblem=${(data['reportedProblem'] as String).length}, workingDescription=${(data['workingDescription'] as String).length}');
+
       await _collection.doc(id).update(data);
-    } catch (e) {
+      print('✅ [UPDATE REQUEST] Success! Document updated: $id');
+    } catch (e, stackTrace) {
+      print('❌ [UPDATE REQUEST] FAILED! Error: $e');
+      print('❌ [UPDATE REQUEST] Stack trace: $stackTrace');
+      print('❌ [UPDATE REQUEST] Document ID: $id, submittedBy: ${request.submittedBy}');
       throw Exception('Failed to update overtime request: $e');
     }
   }

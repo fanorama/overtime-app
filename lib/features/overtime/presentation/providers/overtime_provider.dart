@@ -126,12 +126,16 @@ class OvertimeController extends StateNotifier<AsyncValue<void>> {
 
   /// Create new overtime request
   Future<String?> createRequest(OvertimeRequestEntity request) async {
+    print('🎯 [CONTROLLER] createRequest called');
     state = const AsyncValue.loading();
     try {
       final id = await repository.createRequest(request);
+      print('✅ [CONTROLLER] createRequest success, ID: $id');
       state = const AsyncValue.data(null);
       return id;
     } catch (e, stack) {
+      print('❌ [CONTROLLER] createRequest FAILED! Error: $e');
+      print('❌ [CONTROLLER] Stack: $stack');
       state = AsyncValue.error(e, stack);
       return null;
     }
@@ -139,12 +143,16 @@ class OvertimeController extends StateNotifier<AsyncValue<void>> {
 
   /// Update overtime request
   Future<bool> updateRequest(String id, OvertimeRequestEntity request) async {
+    print('🎯 [CONTROLLER] updateRequest called for ID: $id');
     state = const AsyncValue.loading();
     try {
       await repository.updateRequest(id, request);
+      print('✅ [CONTROLLER] updateRequest success');
       state = const AsyncValue.data(null);
       return true;
     } catch (e, stack) {
+      print('❌ [CONTROLLER] updateRequest FAILED! Error: $e');
+      print('❌ [CONTROLLER] Stack: $stack');
       state = AsyncValue.error(e, stack);
       return false;
     }
