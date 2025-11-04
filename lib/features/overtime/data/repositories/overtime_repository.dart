@@ -210,9 +210,14 @@ class OvertimeRepository {
   Future<void> updateRequest(String id, OvertimeRequestEntity request) async {
     try {
       // SECURITY CHECK: Verify permission
+      final currentUserId = _authHelper.currentUserId;
+      if (currentUserId == null) {
+        throw Exception('User not authenticated');
+      }
+
       await _authHelper.verifyCanUpdateRequest(
         requestId: id,
-        userId: request.submittedBy,
+        userId: currentUserId, // ✅ FIX: Use current user ID, not request owner
       );
 
       final model = OvertimeRequestModel.fromEntity(request);

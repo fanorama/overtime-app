@@ -267,6 +267,31 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
       return;
     }
 
+    // ✅ FIX Bug #5: Validate field length AFTER sanitization
+    // Check critical fields that Firestore rules require minimum length
+    final sanitizedReportedProblem = _reportedProblemController.sanitizedMultilineText;
+    final sanitizedWorkingDescription = _workingDescriptionController.sanitizedMultilineText;
+
+    if (sanitizedReportedProblem.length < AppConstants.minReportedProblemLength) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Deskripsi masalah terlalu pendek setelah dibersihkan. Minimal ${AppConstants.minReportedProblemLength} karakter bermakna.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (sanitizedWorkingDescription.length < AppConstants.minWorkingDescriptionLength) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Deskripsi pekerjaan terlalu pendek setelah dibersihkan. Minimal ${AppConstants.minWorkingDescriptionLength} karakter bermakna.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     // Set loading state
     setState(() => _isSaving = true);
 
@@ -342,6 +367,9 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
       employeeCount: totalEmployees,
     );
 
+    // Determine if this is a re-submission (editing approved/rejected request)
+    final isResubmission = _isEditMode && widget.overtimeRequest!.status != AppConstants.statusPending;
+
     // Create or update request entity
     // SECURITY: All text inputs are sanitized using extension method
     final request = OvertimeRequestEntity(
@@ -374,11 +402,16 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
       calculatedEarnings: earnings,
       mealAllowance: _mealAllowance,
       totalEarnings: earnings + _mealAllowance,
-      status: _isEditMode && widget.overtimeRequest!.status != AppConstants.statusPending
+      status: isResubmission
           ? AppConstants.statusPending // Reset to pending if editing approved/rejected
           : (_isEditMode ? widget.overtimeRequest!.status : AppConstants.statusPending),
-      isEdited: _isEditMode && widget.overtimeRequest!.status != AppConstants.statusPending,
-      editHistory: _isEditMode && widget.overtimeRequest!.status != AppConstants.statusPending
+      // ✅ FIX Bug #2: Clear approval fields when re-submitting
+      approvedBy: isResubmission ? null : (_isEditMode ? widget.overtimeRequest!.approvedBy : null),
+      approverName: isResubmission ? null : (_isEditMode ? widget.overtimeRequest!.approverName : null),
+      approvedAt: isResubmission ? null : (_isEditMode ? widget.overtimeRequest!.approvedAt : null),
+      rejectionReason: isResubmission ? null : (_isEditMode ? widget.overtimeRequest!.rejectionReason : null),
+      isEdited: isResubmission,
+      editHistory: isResubmission
           ? [
               ...widget.overtimeRequest!.editHistory,
               EditHistory(
@@ -395,12 +428,33 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
     // Save to Firestore
     final controller = ref.read(overtimeControllerProvider.notifier);
     bool success;
+    String? errorMessage;
 
     if (_isEditMode) {
       success = await controller.updateRequest(widget.overtimeRequest!.id, request);
     } else {
       final id = await controller.createRequest(request);
       success = id != null;
+    }
+
+    // ✅ FIX Bug #3: Get detailed error message from controller state
+    if (!success) {
+      final controllerState = ref.read(overtimeControllerProvider);
+      controllerState.whenOrNull(
+        error: (error, stack) {
+          errorMessage = error.toString();
+          // Extract meaningful error message if possible
+          if (errorMessage!.contains('permission-denied')) {
+            errorMessage = 'Tidak memiliki izin untuk operasi ini';
+          } else if (errorMessage!.contains('Failed to')) {
+            // Extract message after "Exception: Failed to..."
+            final match = RegExp(r'Failed to [^:]+: (.+)').firstMatch(errorMessage!);
+            if (match != null) {
+              errorMessage = match.group(1);
+            }
+          }
+        },
+      );
     }
 
     if (!mounted) return;
@@ -417,10 +471,15 @@ class _OvertimeFormScreenState extends ConsumerState<OvertimeFormScreen> {
       );
       Navigator.of(context).pop();
     } else {
+      // Show detailed error message
+      final displayError = errorMessage ?? (_isEditMode ? 'Gagal update request' : 'Gagal submit request');
+      print('🔴 [FORM] Displaying error to user: $displayError');
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_isEditMode ? 'Gagal update request' : 'Gagal submit request'),
+          content: Text(displayError),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5), // Longer duration for error messages
         ),
       );
     }

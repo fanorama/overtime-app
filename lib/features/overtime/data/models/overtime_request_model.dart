@@ -167,8 +167,21 @@ class OvertimeRequestModel extends OvertimeRequestEntity {
   }
 
   /// Convert to Firestore data (without ID)
+  ///
+  /// CRITICAL: Removes null approval fields to comply with Firestore security rules
+  /// Rules require approval field keys to NOT EXIST during create operation
   Map<String, dynamic> toFirestore() {
-    return toJson();
+    final data = toJson();
+
+    // ✅ FIX Bug #6: Remove null approval fields
+    // Firestore rules check: !('approvedBy' in request.resource.data.keys())
+    // If key exists (even with null value), rules will REJECT the operation
+    if (approvedBy == null) data.remove('approvedBy');
+    if (approverName == null) data.remove('approverName');
+    if (approvedAt == null) data.remove('approvedAt');
+    if (rejectionReason == null) data.remove('rejectionReason');
+
+    return data;
   }
 
   /// Convert to OvertimeRequestEntity

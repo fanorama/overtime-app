@@ -3,6 +3,12 @@ import 'date_time_utils.dart';
 
 /// Utility class for calculating overtime earnings
 class EarningsCalculator {
+  /// Round double to 2 decimal places to avoid floating point precision errors
+  /// This is critical for Firestore validation which requires precision < 0.01
+  static double _roundTo2Decimals(double value) {
+    return (value * 100).roundToDouble() / 100;
+  }
+
   /// Calculate total earnings for overtime work
   ///
   /// Formula: hours × base_rate × max(work_type_multipliers) + meal_allowance
@@ -24,14 +30,14 @@ class EarningsCalculator {
     // Get highest multiplier from selected work types
     final double multiplier = _getHighestMultiplier(workTypes);
 
-    // Calculate base earnings
-    final double baseEarnings = hours * baseRate * multiplier;
+    // Calculate base earnings and round to 2 decimal places
+    final double baseEarnings = _roundTo2Decimals(hours * baseRate * multiplier);
 
     // Fixed meal allowance
     final double mealAllowance = AppConstants.mealAllowance;
 
-    // Total
-    final double total = baseEarnings + mealAllowance;
+    // Total with rounding
+    final double total = _roundTo2Decimals(baseEarnings + mealAllowance);
 
     return {
       'baseEarnings': baseEarnings,
@@ -105,17 +111,17 @@ Total = ${formatCurrency(total)}
     // Get highest multiplier from selected work types
     final double multiplier = _getHighestMultiplier(workTypes);
 
-    // Calculate base earnings per employee
-    final double baseEarningsPerEmployee = totalHours * baseRate * multiplier;
+    // Calculate base earnings per employee with rounding
+    final double baseEarningsPerEmployee = _roundTo2Decimals(totalHours * baseRate * multiplier);
 
     // Fixed meal allowance per employee
     final double mealAllowancePerEmployee = AppConstants.mealAllowance;
 
-    // Total for all employees
-    final double totalBaseEarnings = baseEarningsPerEmployee * employeeCount;
-    final double totalMealAllowance = mealAllowancePerEmployee * employeeCount;
+    // Total for all employees with rounding
+    final double totalBaseEarnings = _roundTo2Decimals(baseEarningsPerEmployee * employeeCount);
+    final double totalMealAllowance = _roundTo2Decimals(mealAllowancePerEmployee * employeeCount);
 
-    return totalBaseEarnings + totalMealAllowance;
+    return _roundTo2Decimals(totalBaseEarnings + totalMealAllowance);
   }
 
   /// Calculate total earnings for multiple employees between start and end time
@@ -142,10 +148,10 @@ Total = ${formatCurrency(total)}
       workTypes: workTypes,
     );
 
-    // Multiply by employee count (excluding meal allowance which is per person)
-    final baseEarnings = result['baseEarnings']! * employeeCount;
-    final mealAllowance = result['mealAllowance']! * employeeCount;
+    // Multiply by employee count with rounding
+    final baseEarnings = _roundTo2Decimals(result['baseEarnings']! * employeeCount);
+    final mealAllowance = _roundTo2Decimals(result['mealAllowance']! * employeeCount);
 
-    return baseEarnings + mealAllowance;
+    return _roundTo2Decimals(baseEarnings + mealAllowance);
   }
 }
