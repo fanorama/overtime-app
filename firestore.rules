@@ -1,79 +1,308 @@
 rules_version = '2';
 
+// ===============================================================================================
+// Overtime App - Firestore Security Rules
+// ===============================================================================================
+//
+// OVERVIEW:
+// Security rules untuk aplikasi overtime management dengan role-based access control
+//
+// ROLES:
+// - employee: Dapat submit, view, edit overtime requests mereka sendiri
+// - manager: Semua permission employee + approve/reject requests + view all requests
+//
+// COLLECTIONS:
+// - users: Authentication dan role management
+// - employees: Master data karyawan
+// - overtime_requests: Data overtime dengan approval workflow
+//
+// BUSINESS RULES:
+// - Edit approved/rejected requests akan trigger re-approval (status kembali ke pending)
+// - Hanya pending requests yang dapat di-delete
+// - Manager tidak dapat approve/reject request mereka sendiri
+//
+// ===============================================================================================
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
+    // =============================================================================================
+    // HELPER FUNCTIONS - Authentication & Authorization
+    // =============================================================================================
+
+    /**
+     * Check if user is authenticated
+     */
     function isAuthenticated() {
       return request.auth != null;
     }
 
+    /**
+     * Get current user's ID
+     */
+    function getCurrentUserId() {
+      return request.auth.uid;
+    }
+
+    /**
+     * Check if user owns the resource
+     * @param userId - The user ID to check ownership against
+     */
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isAuthenticated() && getCurrentUserId() == userId;
     }
 
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+
+    /**
+     * Check if user has manager role
+     * @param userId - The user ID to check
+     */
+    function userIsManager(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId)) &&
+             get(/databases/$(database)/documents/users/$(userId)).data.role == 'manager';
     }
 
-    function isManager() {
-      return isAuthenticated() && getUserData().role == 'manager';
+    // =============================================================================================
+    // HELPER FUNCTIONS - Data Validation
+    // =============================================================================================
+
+    /**
+     * Validate that a field exists and is a string
+     */
+    function isValidString(field) {
+      return field is string && field.size() > 0;
     }
 
-    function isEmployee() {
-      return isAuthenticated() && getUserData().role == 'employee';
+    /**
+     * Validate that a field exists and is a number
+     */
+    function isValidNumber(field) {
+      return field is number && field >= 0;
     }
 
-    // Users collection
-    // - Users can read and update their own document
-    // - Managers can read all user documents
-    // - Only authenticated users can create (during registration)
+    /**
+     * Validate timestamp field
+     */
+    function isValidTimestamp(field) {
+      return field is timestamp;
+    }
+
+    /**
+     * Validate status field values
+     */
+    function isValidStatus(status) {
+      return status in ['pending', 'approved', 'rejected'];
+    }
+
+    /**
+     * Validate severity field values
+     */
+    function isValidSeverity(severity) {
+      return severity.lower() in ['low', 'medium', 'high', 'critical'];
+    }
+
+    /**
+     * Check if overtime request is in pending status
+     */
+    function isPendingRequest(requestData) {
+      return requestData.status == 'pending';
+    }
+
+    /**
+     * Check if user can transition status
+     * @param fromStatus - Current status
+     * @param toStatus - Target status
+     */
+    function canTransitionStatus(fromStatus, toStatus) {
+      // Pending dapat transisi ke approved/rejected
+      // Approved/rejected dapat kembali ke pending (re-approval flow)
+      return (fromStatus == 'pending' && toStatus in ['approved', 'rejected']) ||
+             (fromStatus in ['approved', 'rejected'] && toStatus == 'pending');
+    }
+
+    /**
+     * Validate required fields for overtime request
+     */
+    function validateOvertimeRequestData() {
+      let data = request.resource.data;
+
+      return isValidString(data.submittedBy) &&
+             isValidString(data.submitterName) &&
+             isValidStatus(data.status) &&
+             isValidTimestamp(data.startTime) &&
+             isValidTimestamp(data.endTime) &&
+             data.startTime < data.endTime &&
+             isValidNumber(data.totalHours) &&
+             isValidString(data.customer) &&
+             isValidString(data.reportedProblem) &&
+             data.reportedProblem.size() >= 10 &&
+             isValidString(data.workingDescription) &&
+             data.workingDescription.size() >= 10 &&
+             data.typeOfWork is list &&
+             data.typeOfWork.size() > 0 &&
+             isValidSeverity(data.severity) &&
+             isValidNumber(data.calculatedEarnings) &&
+             isValidNumber(data.mealAllowance) &&
+             isValidNumber(data.totalEarnings);
+    }
+
+    /**
+     * Validate that calculated fields haven't been tampered with
+     */
+    function validateCalculatedFields() {
+      let data = request.resource.data;
+      // Allow small floating point difference (0.01)
+      return math.abs(data.totalEarnings - (data.calculatedEarnings + data.mealAllowance)) < 0.01;
+    }
+
+    // =============================================================================================
+    // RULES: users collection
+    // =============================================================================================
+    // Authentication and role management
+
     match /users/{userId} {
-      allow read: if isOwner(userId) || isManager();
-      allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow update: if isOwner(userId);
-      allow delete: if false; // No one can delete users
-    }
+      // Read: Users can read their own profile, managers can read all
+      allow read: if isOwner(userId) ||
+                    (isAuthenticated() && userIsManager(request.auth.uid));
 
-    // Employees collection (Master Data)
-    // - All authenticated users can read (for overtime form employee selection)
-    // - Only managers can create, update, or delete employees
-    match /employees/{employeeId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isManager();
-    }
-
-    // Overtime Requests collection
-    // - Users can read their own requests
-    // - Managers can read all requests
-    // - Users can create requests (submittedBy must match their uid)
-    // - Users can update their own PENDING or REJECTED requests
-    // - Managers can update any request (for approval/rejection)
-    //
-    // NOTE: Status comparisons use .lower() for case-insensitive matching
-    // to ensure compatibility with lowercase status values from the app
-    match /overtime_requests/{requestId} {
-      allow read: if isAuthenticated() && (
-        resource.data.submittedBy == request.auth.uid ||
-        isManager()
-      );
-
+      // Create: Allow authenticated users to create (for temporary registration)
+      // TODO: Remove this after admin web is ready
       allow create: if isAuthenticated() &&
-        request.resource.data.submittedBy == request.auth.uid &&
-        request.resource.data.status.lower() == 'pending';
+                      request.resource.data.keys().hasAll(['username', 'displayName', 'role']) &&
+                      isValidString(request.resource.data.username) &&
+                      isValidString(request.resource.data.displayName) &&
+                      request.resource.data.role in ['employee', 'manager'];
 
-      allow update: if isAuthenticated() && (
-        // Employee can update their own pending/rejected requests
-        (resource.data.submittedBy == request.auth.uid &&
-         resource.data.status.lower() in ['pending', 'rejected']) ||
-        // Manager can approve/reject any request
-        isManager()
-      );
+      // Update: Users can update their own profile (limited fields), managers can update any
+      allow update: if (isOwner(userId) &&
+                       // Users can only update displayName, not role
+                       request.resource.data.role == resource.data.role &&
+                       request.resource.data.username == resource.data.username) ||
+                      (isAuthenticated() && userIsManager(request.auth.uid));
 
-      allow delete: if false; // No one can delete requests (audit trail)
+      // Delete: Only managers can delete users
+      allow delete: if isAuthenticated() && userIsManager(request.auth.uid);
     }
 
-    // Deny all other access by default
+    // =============================================================================================
+    // RULES: employees collection
+    // =============================================================================================
+    // Master data karyawan untuk selection di form
+
+    match /employees/{employeeId} {
+      // Read: All authenticated users can read employee list
+      allow read: if isAuthenticated();
+
+      // Write: Only managers can manage employee master data
+      allow create, update: if isAuthenticated() &&
+                              userIsManager(request.auth.uid) &&
+                              request.resource.data.keys().hasAll(['name', 'role', 'isActive']) &&
+                              isValidString(request.resource.data.name) &&
+                              request.resource.data.role in ['engineer', 'maintenance', 'postsales', 'onsite'] &&
+                              request.resource.data.isActive is bool;
+
+      allow delete: if isAuthenticated() && userIsManager(request.auth.uid);
+    }
+
+    // =============================================================================================
+    // RULES: overtime_requests collection
+    // =============================================================================================
+    // Main overtime data dengan approval workflow
+
+    match /overtime_requests/{requestId} {
+
+      // READ RULES
+      // Manager dapat read semua, employee hanya dapat read milik sendiri
+      allow read: if isAuthenticated() && (
+                    // Check if user is manager
+                    userIsManager(request.auth.uid) ||
+                    // Check if user owns the resource
+                    (resource != null && resource.data.submittedBy == request.auth.uid)
+                  );
+
+      // CREATE RULES
+      // Semua authenticated user dapat create overtime request
+      allow create: if isAuthenticated() &&
+                      // Ensure user submits their own request
+                      request.resource.data.submittedBy == getCurrentUserId() &&
+                      // Initial status must be pending
+                      request.resource.data.status == 'pending' &&
+                      // Validate all required fields
+                      validateOvertimeRequestData() &&
+                      // Validate calculated fields haven't been tampered
+                      validateCalculatedFields() &&
+                      // Ensure approval fields are null on create
+                      !('approvedBy' in request.resource.data.keys()) &&
+                      !('approverName' in request.resource.data.keys()) &&
+                      !('approvedAt' in request.resource.data.keys()) &&
+                      !('rejectionReason' in request.resource.data.keys());
+
+      // UPDATE RULES - Complex logic for different scenarios
+      allow update: if isAuthenticated() && (
+        // SCENARIO 1: Owner editing their own request
+        (resource.data.submittedBy == getCurrentUserId() && (
+          // Can freely edit pending requests
+          (isPendingRequest(resource.data) &&
+           request.resource.data.submittedBy == resource.data.submittedBy &&
+           validateOvertimeRequestData() &&
+           validateCalculatedFields()) ||
+
+          // Can edit approved/rejected but triggers re-approval
+          (!isPendingRequest(resource.data) &&
+           request.resource.data.status == 'pending' &&
+           request.resource.data.isEdited == true &&
+           request.resource.data.editHistory is list &&
+           request.resource.data.submittedBy == resource.data.submittedBy &&
+           validateOvertimeRequestData() &&
+           validateCalculatedFields() &&
+           // Clear approval fields when resetting to pending
+           !('approvedBy' in request.resource.data.keys()) &&
+           !('approverName' in request.resource.data.keys()) &&
+           !('approvedAt' in request.resource.data.keys()) &&
+           !('rejectionReason' in request.resource.data.keys()))
+        )) ||
+
+        // SCENARIO 2: Manager approving/rejecting request
+        (userIsManager(request.auth.uid) &&
+         // Cannot approve own request
+         resource.data.submittedBy != request.auth.uid &&
+         // Can only approve/reject pending requests
+         isPendingRequest(resource.data) &&
+         // Status transition must be valid
+         canTransitionStatus(resource.data.status, request.resource.data.status) &&
+         // Preserve original data
+         request.resource.data.submittedBy == resource.data.submittedBy &&
+         request.resource.data.startTime == resource.data.startTime &&
+         request.resource.data.endTime == resource.data.endTime &&
+         request.resource.data.totalHours == resource.data.totalHours &&
+         request.resource.data.customer == resource.data.customer &&
+         request.resource.data.calculatedEarnings == resource.data.calculatedEarnings &&
+         request.resource.data.totalEarnings == resource.data.totalEarnings &&
+         // Validate approval/rejection fields
+         ((request.resource.data.status == 'approved' &&
+           request.resource.data.approvedBy == getCurrentUserId() &&
+           isValidString(request.resource.data.approverName) &&
+           'approvedAt' in request.resource.data.keys() &&
+           !('rejectionReason' in request.resource.data.keys())) ||
+          (request.resource.data.status == 'rejected' &&
+           request.resource.data.approvedBy == getCurrentUserId() &&
+           isValidString(request.resource.data.approverName) &&
+           'approvedAt' in request.resource.data.keys() &&
+           isValidString(request.resource.data.rejectionReason))))
+      );
+
+      // DELETE RULES
+      // Only owner can delete, and only if pending
+      allow delete: if isAuthenticated() &&
+                      resource.data.submittedBy == request.auth.uid &&
+                      isPendingRequest(resource.data);
+    }
+
+    // =============================================================================================
+    // DEFAULT DENY
+    // =============================================================================================
+    // Deny access to any other collections not explicitly defined
+
     match /{document=**} {
       allow read, write: if false;
     }

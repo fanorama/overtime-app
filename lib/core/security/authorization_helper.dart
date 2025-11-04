@@ -25,6 +25,39 @@ class AuthorizationHelper {
   /// Check if current user is authenticated
   bool get isAuthenticated => _auth.currentUser != null;
 
+  /// Get current user's role
+  ///
+  /// Returns user role string or null if not found/authenticated
+  Future<String?> getCurrentUserRole() async {
+    final uid = currentUserId;
+    if (uid == null) return null;
+
+    try {
+      final userDoc = await _firestore
+          .collection(AppConstants.usersCollection)
+          .doc(uid)
+          .get();
+
+      if (!userDoc.exists) return null;
+
+      return userDoc.data()?['role'] as String?;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Check if current user is manager (non-throwing version)
+  ///
+  /// Returns true if user is manager, false otherwise
+  Future<bool> isCurrentUserManager() async {
+    try {
+      final role = await getCurrentUserRole();
+      return role == AppConstants.roleManager;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// Verify user has manager role
   ///
   /// Throws [AuthException.unauthorized] if not authenticated

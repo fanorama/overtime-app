@@ -122,13 +122,67 @@ class OvertimeRepository {
   }
 
   /// Get overtime request by ID as stream
-  Stream<OvertimeRequestEntity?> getRequestByIdStream(String id) {
-    return _collection.doc(id).snapshots().map((doc) {
-      if (doc.exists) {
-        return OvertimeRequestModel.fromFirestore(doc);
-      }
-      return null;
-    });
+  ///
+  /// SECURITY: Uses hybrid approach based on user role:
+  /// - Managers: Direct document access
+  /// - Employees: Query by submittedBy and filter by ID client-side
+  Stream<OvertimeRequestEntity?> getRequestByIdStream(String id) async* {
+    final currentUserId = _authHelper.currentUserId;
+    if (currentUserId == null) {
+      throw Exception('User not authenticated');
+    }
+
+    // Check user role to determine strategy
+    bool isManager = false;
+    try {
+      isManager = await _authHelper.isCurrentUserManager();
+      print('🔍 [DIAGNOSTIC] getRequestByIdStream - User is manager: $isManager');
+    } catch (e) {
+      print('⚠️ [DIAGNOSTIC] Error checking manager role: $e');
+      // Default to non-manager approach if role check fails
+      isManager = false;
+    }
+
+    if (isManager) {
+      // MANAGER: Use direct document access
+      print('📋 [DIAGNOSTIC] Using direct document access for manager');
+
+      yield* _collection.doc(id).snapshots()
+          .handleError((error) {
+            print('❌ [DIAGNOSTIC] Manager access error: $error');
+            // If manager has permission issues, fallback to query approach
+            return null;
+          })
+          .map((doc) {
+            if (doc.exists) {
+              print('✅ [DIAGNOSTIC] Manager retrieved document $id');
+              return OvertimeRequestModel.fromFirestore(doc);
+            }
+            print('❌ [DIAGNOSTIC] Document $id does not exist');
+            return null;
+          });
+    } else {
+      // EMPLOYEE: Query by submittedBy and filter client-side
+      // This approach works around Firestore security rules limitations with compound queries
+      print('📋 [DIAGNOSTIC] Using query approach for employee');
+
+      yield* _collection
+          .where('submittedBy', isEqualTo: currentUserId)
+          .snapshots()
+          .map((snapshot) {
+        print('📄 [DIAGNOSTIC] Employee query returned ${snapshot.docs.length} documents');
+
+        // Filter client-side to find the specific document
+        try {
+          final doc = snapshot.docs.firstWhere((doc) => doc.id == id);
+          print('✅ [DIAGNOSTIC] Found document $id owned by user');
+          return OvertimeRequestModel.fromFirestore(doc);
+        } catch (e) {
+          print('⚠️ [DIAGNOSTIC] Document $id not found or not owned by user');
+          return null;
+        }
+      });
+    }
   }
 
   /// Create new overtime request

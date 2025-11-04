@@ -479,21 +479,29 @@ class OvertimeDetailScreen extends ConsumerWidget {
         loading: () => const Center(
           child: CircularProgressIndicator(),
         ),
-        error: (error, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                'Terjadi kesalahan',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(error.toString()),
-            ],
-          ),
-        ),
+        error: (error, stack) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(
+                  'Terjadi kesalahan',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    error.toString(),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
       // Approval buttons for manager (hanya untuk pending requests)
       floatingActionButton: requestAsync.maybeWhen(
