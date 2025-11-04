@@ -57,6 +57,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  /// Quick login as Employee (Development only)
+  Future<void> _quickLoginAsEmployee() async {
+    _usernameController.text = 'septiandev';
+    _passwordController.text = 'password';
+    await _handleLogin();
+  }
+
+  /// Quick login as Manager (Development only)
+  Future<void> _quickLoginAsManager() async {
+    _usernameController.text = 'manager';
+    _passwordController.text = 'password';
+    await _handleLogin();
+  }
+
   void _navigateToRegister() {
     Navigator.of(context).pushNamed('/register');
   }
@@ -182,6 +196,93 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onPressed: authState.isLoading ? null : _handleLogin,
                     isLoading: authState.isLoading,
                     icon: Icons.login,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Development Quick Login Section
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.orange.shade300,
+                        width: 2,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.developer_mode,
+                              color: Colors.orange.shade700,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Development Quick Login',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange.shade900,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: authState.isLoading ? null : _quickLoginAsEmployee,
+                                icon: const Icon(Icons.engineering, size: 18),
+                                label: const Text(
+                                  'Employee',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue.shade600,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: authState.isLoading ? null : _quickLoginAsManager,
+                                icon: const Icon(Icons.admin_panel_settings, size: 18),
+                                label: const Text(
+                                  'Manager',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.purple.shade600,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Employee: septiandev | Manager: manager',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.orange.shade700,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
 
